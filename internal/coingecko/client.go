@@ -30,6 +30,10 @@ func fetchJSON(url string) (Response, error) {
 		return nil, fmt.Errorf("read: %w", err)
 	}
 
+	if resp.StatusCode != 200 {
+		return nil, fmt.Errorf("HTTP: %s", string(body))
+	}
+
 	var cgResp Response
 	if err := json.Unmarshal(body, &cgResp); err != nil {
 		return nil, fmt.Errorf("JSON: %w", err)

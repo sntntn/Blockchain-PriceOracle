@@ -22,6 +22,7 @@ func main() {
 		fmt.Println("\n=== NEW MINUTE ===")
 		if prices, err := coingecko.FetchPrices(); err != nil {
 			fmt.Printf("Fetch error: %v\n", err)
+			// TO DO fallback prices
 		} else {
 			printPrices(&prices)
 		}
