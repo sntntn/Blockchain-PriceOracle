@@ -8,10 +8,3 @@ package coingecko
 //	    ...
 //	}
 type Response map[string]map[string]float64
-
-// Simbol mapping (CoinGecko ID -> Contract simbol)
-var SupportedSymbols = map[string]string{
-	"bitcoin":  "BTC",
-	"ethereum": "ETH",
-	// "solana":   "SOL",
-}

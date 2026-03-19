@@ -5,34 +5,39 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"strings"
 )
 
 func FetchPrices() (map[string]float64, error) {
-	ids := make([]string, 0, len(SupportedSymbols))
-	for cgId := range SupportedSymbols {
-		ids = append(ids, cgId)
+	url := BuildPriceURL()
+
+	cgResp, err := fetchJSON(url)
+	if err != nil {
+		return nil, err
 	}
 
-	url := fmt.Sprintf("https://api.coingecko.com/api/v3/simple/price?ids=%s&vs_currencies=usd",
-		strings.Join(ids, ","))
+	return MapCGtoContract(cgResp), nil
+}
 
+func fetchJSON(url string) (Response, error) {
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP error: %w", err)
+		return nil, fmt.Errorf("HTTP: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("read error: %w", err)
+		return nil, fmt.Errorf("read: %w", err)
 	}
 
 	var cgResp Response
 	if err := json.Unmarshal(body, &cgResp); err != nil {
-		return nil, fmt.Errorf("JSON error: %w", err)
+		return nil, fmt.Errorf("JSON: %w", err)
 	}
+	return cgResp, nil
+}
 
+func MapCGtoContract(cgResp Response) map[string]float64 {
 	prices := make(map[string]float64)
 
 	for cgId, contractSymbol := range SupportedSymbols {
@@ -50,6 +55,5 @@ func FetchPrices() (map[string]float64, error) {
 			fmt.Printf("ERROR: %s not in response\n", cgId)
 		}
 	}
-
-	return prices, nil
+	return prices
 }
