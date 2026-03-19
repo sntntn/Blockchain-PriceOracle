@@ -5,10 +5,17 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"strings"
 )
 
 func FetchPrices() (map[string]float64, error) {
-	url := "https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,ethereum&vs_currencies=usd"
+	ids := make([]string, 0, len(SupportedSymbols))
+	for cgId := range SupportedSymbols {
+		ids = append(ids, cgId)
+	}
+
+	url := fmt.Sprintf("https://api.coingecko.com/api/v3/simple/price?ids=%s&vs_currencies=usd",
+		strings.Join(ids, ","))
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -28,18 +35,20 @@ func FetchPrices() (map[string]float64, error) {
 
 	prices := make(map[string]float64)
 
-	if price, ok := cgResp.Ethereum["usd"]; ok {
-		prices["ETH"] = price
-		//fmt.Printf("ETHEREUM: $%.2f\n", price)
-	} else {
-		fmt.Println("ETH price not found")
-	}
+	for cgId, contractSymbol := range SupportedSymbols {
 
-	if price, ok := cgResp.Bitcoin["usd"]; ok {
-		prices["BTC"] = price
-		//fmt.Printf("BITCOIN: $%.2f\n", price)
-	} else {
-		fmt.Println("BTC price not found")
+		if coinData, ok := cgResp[cgId]; ok {
+
+			if usdPrice, ok := coinData["usd"]; ok {
+				prices[contractSymbol] = usdPrice
+				fmt.Printf("%s: $%.2f\n", contractSymbol, usdPrice)
+			} else {
+				fmt.Printf("ERROR: %s USD price not found\n", contractSymbol)
+			}
+
+		} else {
+			fmt.Printf("ERROR: %s not in response\n", cgId)
+		}
 	}
 
 	return prices, nil

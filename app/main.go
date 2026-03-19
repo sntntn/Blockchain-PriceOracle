@@ -9,7 +9,7 @@ import (
 
 func printPrices(prices *map[string]float64) {
 	for symbol, price := range *prices {
-		fmt.Printf("%s: $%.2f\n", symbol, price)
+		fmt.Printf("price -> %s: $%.2f\n", symbol, price)
 	}
 }
 

@@ -1,13 +1,17 @@
 package coingecko
 
 // CoinGecko API response
-type Response struct {
-	Bitcoin  map[string]float64 `json:"bitcoin"`
-	Ethereum map[string]float64 `json:"ethereum"`
-}
+//
+//	 {
+//	   "bitcoin":{"usd":65234},
+//	   "ethereum":{"usd":2330},
+//	    ...
+//	}
+type Response map[string]map[string]float64
 
 // Simbol mapping (CoinGecko ID -> Contract simbol)
 var SupportedSymbols = map[string]string{
 	"bitcoin":  "BTC",
 	"ethereum": "ETH",
+	// "solana":   "SOL",
 }
