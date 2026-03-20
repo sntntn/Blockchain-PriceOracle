@@ -9,6 +9,7 @@ import (
 	"Blockchain-PriceOracle/app/api"
 	"Blockchain-PriceOracle/app/utils"
 	"Blockchain-PriceOracle/internal/coingecko"
+	"Blockchain-PriceOracle/internal/oracle"
 
 	"github.com/gin-gonic/gin"
 	"github.com/joho/godotenv"
@@ -57,7 +58,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	utils.GetOracleClient()
+	oracle.GetOracleClient()
 	// utils.TestOracle()
 
 	// -------------------------------------------

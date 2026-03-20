@@ -1,9 +1,8 @@
 package api
 
 import (
+	"Blockchain-PriceOracle/internal/oracle"
 	"net/http"
-
-	"Blockchain-PriceOracle/app/utils"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +17,7 @@ type PriceResponse struct {
 func GetPricesHandler(c *gin.Context) {
 	symbol := c.Param("symbol")
 
-	client := utils.GetOracleClient()
+	client := oracle.GetOracleClient()
 
 	onChainPrice, err := client.GetOnChainPrice(symbol)
 	if err != nil {

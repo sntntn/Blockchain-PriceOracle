@@ -5,24 +5,7 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"sync"
 )
-
-var (
-	oracleClient *oracle.Client
-	once         sync.Once
-)
-
-func GetOracleClient() *oracle.Client {
-	once.Do(func() {
-		var err error
-		oracleClient, err = oracle.NewClient()
-		if err != nil {
-			log.Fatalf("Oracle client init: %v", err)
-		}
-	})
-	return oracleClient
-}
 
 // func TestOracle() {
 // 	fmt.Println("Oracle Test - Smart Contract PRICE")
@@ -41,6 +24,7 @@ func GetOracleClient() *oracle.Client {
 // }
 
 func CheckPriceCriteria(symbol string, newPrice *big.Int) bool {
+	oracleClient := oracle.GetOracleClient()
 	onChainPrice, err := oracleClient.GetOnChainPrice(symbol)
 	if err != nil {
 		log.Printf("GetPrice %s: %v", symbol, err)

@@ -3,14 +3,32 @@ package oracle
 import (
 	"context"
 	"fmt"
+	"log"
 	"math/big"
 	"strings"
+	"sync"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
+
+var (
+	oracleClient *Client
+	once         sync.Once
+)
+
+func GetOracleClient() *Client {
+	once.Do(func() {
+		var err error
+		oracleClient, err = NewClient()
+		if err != nil {
+			log.Fatalf("Oracle client init: %v", err)
+		}
+	})
+	return oracleClient
+}
 
 type Client struct {
 	rpc         *ethclient.Client
