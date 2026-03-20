@@ -1,6 +1,7 @@
 package api
 
 import (
+	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
 	"net/http"
 
@@ -11,15 +12,15 @@ type PriceResponse struct {
 	Symbol       string `json:"symbol"`
 	OnChainPrice string `json:"onchain_price"`
 	Chainlink    string `json:"chainlink_price"` // I added this
-	// TO DO - add coingecko response
+	CoinGeckoRaw string `json:"coingecko_raw"`
 }
 
 func GetPricesHandler(c *gin.Context) {
 	symbol := c.Param("symbol")
 
-	client := oracle.GetOracleClient()
+	oracleClient := oracle.GetOracleClient()
 
-	onChainPrice, err := client.GetOnChainPrice(symbol)
+	onChainPrice, err := oracleClient.GetOnChainPrice(symbol)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch onchain price: " + err.Error(),
@@ -27,10 +28,26 @@ func GetPricesHandler(c *gin.Context) {
 		return
 	}
 
-	chainlinkPrice, err := client.GetChainlinkPrice(symbol)
+	chainlinkPrice, err := oracleClient.GetChainlinkPrice(symbol)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch Chainlink price: " + err.Error(),
+		})
+		return
+	}
+
+	cgPrices, err := coingecko.FetchPrices()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{
+			"error": "Failed to fetch CoinGecko price: " + err.Error(),
+		})
+		return
+	}
+
+	cgPrice, exists := cgPrices[symbol]
+	if !exists {
+		c.JSON(http.StatusBadRequest, gin.H{
+			"error": "Symbol " + symbol + " not supported by CoinGecko",
 		})
 		return
 	}
@@ -39,6 +56,7 @@ func GetPricesHandler(c *gin.Context) {
 		Symbol:       symbol,
 		OnChainPrice: onChainPrice.String(),
 		Chainlink:    chainlinkPrice.String(),
+		CoinGeckoRaw: cgPrice.String(),
 	}
 
 	c.JSON(http.StatusOK, response)
