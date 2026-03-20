@@ -4,10 +4,11 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"math/big"
 	"net/http"
 )
 
-func FetchPrices() (map[string]float64, error) {
+func FetchPrices() (map[string]*big.Int, error) {
 	url := BuildPriceURL()
 
 	cgResp, err := fetchJSON(url)
@@ -41,16 +42,17 @@ func fetchJSON(url string) (Response, error) {
 	return cgResp, nil
 }
 
-func MapCGtoContract(cgResp Response) map[string]float64 {
-	prices := make(map[string]float64)
+func MapCGtoContract(cgResp Response) map[string]*big.Int {
+	prices := make(map[string]*big.Int)
 
 	for cgId, contractSymbol := range SupportedSymbols {
 
 		if coinData, ok := cgResp[cgId]; ok {
 
 			if usdPrice, ok := coinData["usd"]; ok {
-				prices[contractSymbol] = usdPrice
-				fmt.Printf("%s: $%.2f\n", contractSymbol, usdPrice)
+				contractPrice := float64ToContract(usdPrice)
+				prices[contractSymbol] = contractPrice
+				fmt.Printf("%s: $%.2f -> %s (conversion)\n", contractSymbol, usdPrice, contractPrice.String())
 			} else {
 				fmt.Printf("ERROR: %s USD price not found\n", contractSymbol)
 			}
@@ -60,4 +62,12 @@ func MapCGtoContract(cgResp Response) map[string]float64 {
 		}
 	}
 	return prices
+}
+
+func float64ToContract(price float64) *big.Int {
+	scaledPrice := big.NewFloat(price)
+	scaledPrice.Mul(scaledPrice, big.NewFloat(1e8))
+	result := new(big.Int)
+	scaledPrice.Int(result)
+	return result
 }

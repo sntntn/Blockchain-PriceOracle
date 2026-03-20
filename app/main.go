@@ -3,17 +3,18 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/big"
 	"time"
 
+	"Blockchain-PriceOracle/app/utils"
 	"Blockchain-PriceOracle/internal/coingecko"
-	"Blockchain-PriceOracle/internal/oracle"
 
 	"github.com/joho/godotenv"
 )
 
-func printPrices(prices *map[string]float64) {
+func printPrices(prices *map[string]*big.Int) {
 	for symbol, price := range *prices {
-		fmt.Printf("price -> %s: $%.2f\n", symbol, price)
+		fmt.Printf("price -> %s: $%s\n", symbol, price.String())
 	}
 }
 
@@ -23,25 +24,8 @@ func main() {
 		log.Fatal(err)
 	}
 
-	fmt.Println("Oracle Test - Smart Contract PRICE")
-
-	client, err := oracle.NewClient()
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	// Test BTC
-	btcPrice, err := client.GetPrice("BTC")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("BTC Onchain: %s\n", btcPrice.String())
-
-	btcCL, err := client.GetChainlinkPrice("BTC")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("BTC Chainlink: %s\n", btcCL.String())
+	utils.InitOracleClient()
+	utils.TestOracle()
 
 	// -------------------------------------------
 	fmt.Println("----------------------------")
@@ -50,12 +34,23 @@ func main() {
 	ticker := time.NewTicker(1 * time.Minute)
 	for {
 		fmt.Println("\n=== NEW MINUTE ===")
-		if cgPrices, err := coingecko.FetchPrices(); err != nil {
+
+		cgPrices, err := coingecko.FetchPrices()
+		if err != nil {
 			fmt.Printf("Fetch error: %v\n", err)
 			// TO DO fallback prices
-		} else {
-			printPrices(&cgPrices)
+			<-ticker.C
+			continue
 		}
+
+		printPrices(&cgPrices)
+
+		for symbol, price := range cgPrices {
+			if utils.CheckPriceCriteria(symbol, price) {
+				fmt.Printf("%s - SEND TX NOW!\n", symbol)
+			}
+		}
+
 		<-ticker.C
 	}
 
