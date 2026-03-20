@@ -39,7 +39,7 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
-func (c *Client) GetPrice(symbol string) (*big.Int, error) {
+func (c *Client) GetOnChainPrice(symbol string) (*big.Int, error) {
 	data, err := c.contractABI.Pack("getPrice", symbol)
 	if err != nil {
 		return nil, fmt.Errorf("pack getPrice: %w", err)

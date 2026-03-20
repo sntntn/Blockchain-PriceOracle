@@ -25,7 +25,7 @@ func main() {
 	}
 
 	utils.GetOracleClient()
-	utils.TestOracle()
+	// utils.TestOracle()
 
 	// -------------------------------------------
 	fmt.Println("----------------------------")

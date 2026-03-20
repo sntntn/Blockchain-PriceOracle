@@ -24,24 +24,24 @@ func GetOracleClient() *oracle.Client {
 	return oracleClient
 }
 
-func TestOracle() {
-	fmt.Println("Oracle Test - Smart Contract PRICE")
+// func TestOracle() {
+// 	fmt.Println("Oracle Test - Smart Contract PRICE")
 
-	btcPrice, err := oracleClient.GetPrice("BTC")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("BTC Onchain: %s\n", btcPrice.String())
+// 	btcPrice, err := oracleClient.GetPrice("BTC")
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Printf("BTC Onchain: %s\n", btcPrice.String())
 
-	btcCL, err := oracleClient.GetChainlinkPrice("BTC")
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Printf("BTC Chainlink: %s\n", btcCL.String())
-}
+// 	btcCL, err := oracleClient.GetChainlinkPrice("BTC")
+// 	if err != nil {
+// 		log.Fatal(err)
+// 	}
+// 	fmt.Printf("BTC Chainlink: %s\n", btcCL.String())
+// }
 
 func CheckPriceCriteria(symbol string, newPrice *big.Int) bool {
-	onChainPrice, err := oracleClient.GetPrice(symbol)
+	onChainPrice, err := oracleClient.GetOnChainPrice(symbol)
 	if err != nil {
 		log.Printf("GetPrice %s: %v", symbol, err)
 		return false
