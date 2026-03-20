@@ -24,7 +24,7 @@ func main() {
 		log.Fatal(err)
 	}
 
-	utils.InitOracleClient()
+	utils.GetOracleClient()
 	utils.TestOracle()
 
 	// -------------------------------------------

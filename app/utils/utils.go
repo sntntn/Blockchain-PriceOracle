@@ -5,16 +5,23 @@ import (
 	"fmt"
 	"log"
 	"math/big"
+	"sync"
 )
 
-var oracleClient *oracle.Client
+var (
+	oracleClient *oracle.Client
+	once         sync.Once
+)
 
-func InitOracleClient() {
-	var err error
-	oracleClient, err = oracle.NewClient()
-	if err != nil {
-		log.Fatalf("Oracle client init: %v", err)
-	}
+func GetOracleClient() *oracle.Client {
+	once.Do(func() {
+		var err error
+		oracleClient, err = oracle.NewClient()
+		if err != nil {
+			log.Fatalf("Oracle client init: %v", err)
+		}
+	})
+	return oracleClient
 }
 
 func TestOracle() {
