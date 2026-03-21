@@ -1,13 +1,15 @@
 package websocket
 
 import (
-	"bytes"
+	"Blockchain-PriceOracle/internal/oracle"
 	"context"
 	"fmt"
 	"log"
 	"math/big"
+	"strings"
 
 	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -28,6 +30,11 @@ func StartEventListener(oracleAddr, wsURL string) {
 		log.Fatal(err)
 	}
 
+	contractAbi, err := abi.JSON(strings.NewReader(oracle.ContractABI))
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	log.Printf("Listening -> %s (Alchemy WSS)", oracleAddr)
 
 	for {
@@ -37,17 +44,26 @@ func StartEventListener(oracleAddr, wsURL string) {
 		case vlog := <-logs:
 			fmt.Printf("Event: tx=%s, topics=%d\n", vlog.TxHash.Hex(), len(vlog.Topics))
 
-			// TO DO - Parse event (topic0 = event signature, topic1 = indexed symbol)
-			if len(vlog.Topics) > 1 {
-				symbolBytes := vlog.Topics[1].Bytes()                 // indexed symbol
-				symbol := string(bytes.TrimLeft(symbolBytes, "\x00")) // BTC, ETH...
+			eventData := struct {
+				OldPrice *big.Int `json:"oldPrice"`
+				NewPrice *big.Int `json:"newPrice"`
+			}{}
 
-				// Mock newPrice iz Data (za sada)
-				newPrice := big.NewInt(7500000000000).String()
+			err := contractAbi.UnpackIntoInterface(&eventData, "PriceUpdated", vlog.Data)
 
-				PublishPriceUpdate(symbol, newPrice)
-				log.Printf("Published: %s → %s", symbol, newPrice)
+			if err != nil {
+				log.Printf("Parse error: %v", err)
+				continue
 			}
+
+			symbolBytes := vlog.Topics[1].Bytes()
+			symbol := strings.TrimLeft(string(symbolBytes), "\x00")
+			symbol = strings.TrimRight(symbol, "\x00")
+
+			log.Printf("✅ REAL: %s → %s → %s",
+				symbol, eventData.OldPrice.String(), eventData.NewPrice.String())
+
+			PublishPriceUpdate(symbol, eventData.NewPrice.String())
 		}
 	}
 }
