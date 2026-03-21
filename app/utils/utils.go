@@ -83,3 +83,9 @@ func absDiff(a, b *big.Int) *big.Int {
 	}
 	return new(big.Int).Sub(b, a)
 }
+
+func PrintPrices(prices *map[string]*big.Int) {
+	for symbol, price := range *prices {
+		fmt.Printf("price -> %s: $%s\n", symbol, price.String())
+	}
+}

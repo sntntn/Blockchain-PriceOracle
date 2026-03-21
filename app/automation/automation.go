@@ -2,10 +2,11 @@ package automation
 
 import (
 	"Blockchain-PriceOracle/app/utils"
+	"Blockchain-PriceOracle/app/websocket"
 	"Blockchain-PriceOracle/internal/coingecko"
 	"fmt"
 	"log"
-	"math/big"
+	"os"
 	"time"
 )
 
@@ -30,7 +31,7 @@ func CoinGeckoLoop() {
 			continue
 		}
 
-		printPrices(&cgPrices)
+		utils.PrintPrices(&cgPrices)
 
 		for symbol, price := range cgPrices {
 			if utils.CheckPriceCriteria(symbol, price) {
@@ -42,8 +43,16 @@ func CoinGeckoLoop() {
 	}
 }
 
-func printPrices(prices *map[string]*big.Int) {
-	for symbol, price := range *prices {
-		fmt.Printf("price -> %s: $%s\n", symbol, price.String())
+func StartEthereumListener() {
+	wssURL := os.Getenv("WSS_URL")
+	contractAddr := os.Getenv("CONTRACT_ADDR")
+
+	if contractAddr != "" && wssURL != "" {
+		go func() {
+			log.Printf("Starting Ethereum listener: %s", wssURL)
+			websocket.StartEventListener(contractAddr, wssURL)
+		}()
+	} else {
+		log.Println("Skipping Ethereum listener - missing ORACLE_CONTRACT_ADDR or ethereum WSS_URL")
 	}
 }

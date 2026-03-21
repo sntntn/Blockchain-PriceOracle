@@ -28,7 +28,7 @@ func StartEventListener(oracleAddr, wsURL string) {
 		log.Fatal(err)
 	}
 
-	log.Printf("Listening → %s (Alchemy WSS)", oracleAddr)
+	log.Printf("Listening -> %s (Alchemy WSS)", oracleAddr)
 
 	for {
 		select {

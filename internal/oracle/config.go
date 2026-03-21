@@ -19,7 +19,7 @@ func LoadConfig() Config {
 
 	return Config{
 		SepoliaRPC:   rpc,
-		ContractAddr: "0x19D1c199cFEC4022A76045aEc281ccb63F18387B",
+		ContractAddr: os.Getenv("CONTRACT_ADDR"),
 	}
 }
 
