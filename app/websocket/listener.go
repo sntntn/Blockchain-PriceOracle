@@ -36,12 +36,17 @@ func StartEventListener(oracleAddr, wsURL string) {
 
 	log.Printf("Listening -> %s (Alchemy WSS)", oracleAddr)
 
+	eventSig := contractAbi.Events["PriceUpdated"].ID
+
 	for {
 		select {
 		case err := <-sub.Err():
 			log.Fatal(err)
 		case vlog := <-logs:
 			//fmt.Printf("Event: tx=%s, topics=%d\n", vlog.TxHash.Hex(), len(vlog.Topics))
+			if vlog.Topics[0] != eventSig {
+				continue
+			}
 
 			eventData := struct {
 				Symbol   string   `json:"symbol"`
