@@ -3,7 +3,6 @@ package websocket
 import (
 	"Blockchain-PriceOracle/internal/oracle"
 	"context"
-	"fmt"
 	"log"
 	"math/big"
 	"strings"
@@ -42,9 +41,10 @@ func StartEventListener(oracleAddr, wsURL string) {
 		case err := <-sub.Err():
 			log.Fatal(err)
 		case vlog := <-logs:
-			fmt.Printf("Event: tx=%s, topics=%d\n", vlog.TxHash.Hex(), len(vlog.Topics))
+			//fmt.Printf("Event: tx=%s, topics=%d\n", vlog.TxHash.Hex(), len(vlog.Topics))
 
 			eventData := struct {
+				Symbol   string   `json:"symbol"`
 				OldPrice *big.Int `json:"oldPrice"`
 				NewPrice *big.Int `json:"newPrice"`
 			}{}
@@ -56,14 +56,13 @@ func StartEventListener(oracleAddr, wsURL string) {
 				continue
 			}
 
-			symbolBytes := vlog.Topics[1].Bytes()
-			symbol := strings.TrimLeft(string(symbolBytes), "\x00")
-			symbol = strings.TrimRight(symbol, "\x00")
+			log.Printf("SOCKET: OnChain price is CHANGED: %s → %s → %s",
+				eventData.Symbol,
+				eventData.OldPrice.String(),
+				eventData.NewPrice.String(),
+			)
 
-			log.Printf("✅ REAL: %s → %s → %s",
-				symbol, eventData.OldPrice.String(), eventData.NewPrice.String())
-
-			PublishPriceUpdate(symbol, eventData.NewPrice.String())
+			PublishPriceUpdate(eventData.Symbol, eventData.NewPrice.String())
 		}
 	}
 }
