@@ -52,7 +52,7 @@ func MapCGtoContract(cgResp Response) map[string]*big.Int {
 			if usdPrice, ok := coinData["usd"]; ok {
 				contractPrice := float64ToContract(usdPrice)
 				prices[contractSymbol] = contractPrice
-				fmt.Printf("%s: $%.2f -> %s (conversion)\n", contractSymbol, usdPrice, contractPrice.String())
+				fmt.Printf("%s: $%.2f -> %s (coingecko conversion)\n", contractSymbol, usdPrice, contractPrice.String())
 			} else {
 				fmt.Printf("ERROR: %s USD price not found\n", contractSymbol)
 			}

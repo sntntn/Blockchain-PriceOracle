@@ -2,6 +2,7 @@ package server
 
 import (
 	"Blockchain-PriceOracle/app/api"
+	"Blockchain-PriceOracle/app/websocket"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -16,6 +17,8 @@ func SetupServer() *gin.Engine {
 		v1.GET("/prices/:symbol/history", api.GetPriceHistoryHandler)
 		v1.GET("/health", healthHandler)
 	}
+
+	websocket.SetupWebSocket(r)
 
 	return r
 }

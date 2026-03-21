@@ -10,11 +10,13 @@ import (
 )
 
 func CoinGeckoLoop() {
+	time.Sleep(3 * time.Second) //to separate these logs from logs at app start
+
 	ticker := time.NewTicker(1 * time.Minute)
 	defer ticker.Stop()
 
-	log.Println("CoinGecko loop: every 1min (background)")
 	fmt.Println("----------------------------")
+	log.Println("CoinGecko loop: every 1min (background)")
 	fmt.Println("1min intervals started - CoinGecko")
 
 	for {
