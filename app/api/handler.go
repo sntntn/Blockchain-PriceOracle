@@ -1,9 +1,11 @@
 package api
 
 import (
+	"Blockchain-PriceOracle/app/utils"
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
 	"net/http"
+	"time"
 
 	"github.com/gin-gonic/gin"
 )
@@ -15,14 +17,9 @@ type PriceResponse struct {
 	CoinGeckoRaw string `json:"coingecko_raw"`
 }
 
-type PriceHistory struct {
-	Timestamp    string `json:"timestamp"`
-	OnChainPrice string `json:"onchain_price"`
-}
-
-type HistoryResponse struct {
-	Symbol string         `json:"symbol"`
-	Data   []PriceHistory `json:"data"`
+type RangeRequest struct {
+	From string `json:"from" binding:"required"` // "2026-03-21T15:00:00Z"
+	To   string `json:"to" binding:"required"`   // "2026-03-22T17:00:00Z"
 }
 
 func GetPricesHandler(c *gin.Context) {
@@ -72,25 +69,35 @@ func GetPricesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-// TO DO - real data
-func GetPriceHistoryHandler(c *gin.Context) {
+func GetPriceRangeHandler(c *gin.Context) {
 	symbol := c.Param("symbol")
 
-	// Mock data - BTC last 7 days
-	mockHistory := []PriceHistory{
-		{"2026-03-13 10:00", "7200000000000"},
-		{"2026-03-14 10:00", "7250000000000"},
-		{"2026-03-15 10:00", "7100000000000"},
-		{"2026-03-16 10:00", "7350000000000"},
-		{"2026-03-17 10:00", "7280000000000"},
-		{"2026-03-18 10:00", "7320000000000"},
-		{"2026-03-19 10:00", "7300000000000"},
+	var req RangeRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid from/to format"})
+		return
 	}
 
-	response := HistoryResponse{
-		Symbol: symbol,
-		Data:   mockHistory,
+	// RFC3339 = "2026-03-21T15:43:07Z"
+	from, err := time.Parse(time.RFC3339, req.From)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "From must be RFC3339"})
+		return
 	}
 
-	c.JSON(http.StatusOK, response)
+	to, err := time.Parse(time.RFC3339, req.To)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "To must be RFC3339"})
+		return
+	}
+
+	prices := utils.GetPriceHistory().Range(symbol, from, to)
+
+	c.JSON(http.StatusOK, gin.H{
+		"symbol": symbol,
+		"from":   from.Format(time.RFC3339),
+		"to":     to.Format(time.RFC3339),
+		"prices": prices,
+		"count":  len(prices),
+	})
 }

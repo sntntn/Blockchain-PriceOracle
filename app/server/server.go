@@ -14,7 +14,7 @@ func SetupServer() *gin.Engine {
 	v1 := r.Group("/api/v1")
 	{
 		v1.GET("/prices/:symbol", api.GetPricesHandler)
-		v1.GET("/prices/:symbol/history", api.GetPriceHistoryHandler)
+		v1.POST("/prices/:symbol/range", api.GetPriceRangeHandler)
 		v1.GET("/health", healthHandler)
 	}
 
