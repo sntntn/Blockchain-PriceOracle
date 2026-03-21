@@ -36,6 +36,7 @@ func CoinGeckoLoop() {
 		for symbol, price := range cgPrices {
 			if utils.CheckPriceCriteria(symbol, price) {
 				log.Printf("%s - SEND TX NOW!\n", symbol)
+				utils.GetPriceHistory().Add(symbol, price.String()) // TO DO - if not reverted
 			}
 		}
 

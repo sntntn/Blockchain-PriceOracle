@@ -45,7 +45,7 @@ func NewClient() (*Client, error) {
 		return nil, fmt.Errorf("RPC dial: %w", err)
 	}
 
-	abidata, err := abi.JSON(strings.NewReader(ContractABI))
+	contractAbi, err := abi.JSON(strings.NewReader(ContractABI))
 	if err != nil {
 		return nil, fmt.Errorf("ABI parse: %w", err)
 	}
@@ -53,7 +53,7 @@ func NewClient() (*Client, error) {
 	return &Client{
 		rpc:         conn,
 		addr:        common.HexToAddress(config.ContractAddr),
-		contractABI: &abidata,
+		contractABI: &contractAbi,
 	}, nil
 }
 
