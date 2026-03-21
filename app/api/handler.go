@@ -5,6 +5,7 @@ import (
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -97,6 +98,27 @@ func GetPriceRangeHandler(c *gin.Context) {
 		"symbol": symbol,
 		"from":   from.Format(time.RFC3339),
 		"to":     to.Format(time.RFC3339),
+		"prices": prices,
+		"count":  len(prices),
+	})
+}
+
+func GetLastNHandler(c *gin.Context) {
+	symbol := c.Param("symbol")
+	n := 10 // Default
+	if nStr := c.Query("n"); nStr != "" {
+		var err error
+		n, err = strconv.Atoi(nStr)
+		if err != nil || n <= 0 || n > 1000 {
+			c.JSON(http.StatusBadRequest, gin.H{"error": "n must be 1-1000"})
+			return
+		}
+	}
+
+	prices := utils.GetPriceHistory().LastN(symbol, n)
+	c.JSON(http.StatusOK, gin.H{
+		"symbol": symbol,
+		"n":      n,
 		"prices": prices,
 		"count":  len(prices),
 	})

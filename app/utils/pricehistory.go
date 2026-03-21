@@ -71,3 +71,21 @@ func (h *PriceHistory) Range(symbol string, from, to time.Time) []PricePoint {
 	}
 	return result
 }
+
+func (h *PriceHistory) LastN(symbol string, n int) []PricePoint {
+	h.mu.RLock()
+	defer h.mu.RUnlock()
+
+	l, exists := h.data[symbol]
+	if !exists {
+		return nil
+	}
+
+	var result []PricePoint
+	count := 0
+	for e := l.Back(); e != nil && count < n; e = e.Prev() {
+		result = append([]PricePoint{e.Value.(PricePoint)}, result...)
+		count++
+	}
+	return result
+}

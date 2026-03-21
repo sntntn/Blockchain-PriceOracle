@@ -15,6 +15,7 @@ func SetupServer() *gin.Engine {
 	{
 		v1.GET("/prices/:symbol", api.GetPricesHandler)
 		v1.POST("/prices/:symbol/range", api.GetPriceRangeHandler)
+		v1.GET("/prices/:symbol/last", api.GetLastNHandler)
 		v1.GET("/health", healthHandler)
 	}
 
