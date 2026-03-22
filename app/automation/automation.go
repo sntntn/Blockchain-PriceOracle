@@ -4,6 +4,7 @@ import (
 	"Blockchain-PriceOracle/app/utils"
 	"Blockchain-PriceOracle/app/websocket"
 	"Blockchain-PriceOracle/internal/coingecko"
+	"Blockchain-PriceOracle/internal/oracle"
 	"fmt"
 	"log"
 	"os"
@@ -35,8 +36,15 @@ func CoinGeckoLoop() {
 
 		for symbol, price := range cgPrices {
 			if utils.CheckPriceCriteria(symbol, price) {
-				log.Printf("%s - SEND TX NOW!\n", symbol)
-				utils.GetPriceHistory().Add(symbol, price.String()) // TO DO - if not reverted
+				log.Printf("%s - PASSED THE CRITERIA - SEND TX NOW!\n", symbol)
+
+				txHash, err := oracle.GetOracleClient().SetPrice(symbol, price)
+				if err != nil {
+					log.Printf("TX FAILED %s: %v", symbol, err)
+				} else {
+					log.Printf("TX SENT %s: %s", symbol, txHash.Hex())  //temporary - TO DO - see if TX is reverted
+					utils.GetPriceHistory().Add(symbol, price.String()) // TO DO - if not reverted
+				}
 			}
 		}
 

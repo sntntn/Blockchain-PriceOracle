@@ -7,6 +7,7 @@ import (
 type Config struct {
 	SepoliaRPC   string
 	ContractAddr string
+	PrivateKey   string
 }
 
 func LoadConfig() Config {
@@ -20,6 +21,7 @@ func LoadConfig() Config {
 	return Config{
 		SepoliaRPC:   rpc,
 		ContractAddr: os.Getenv("CONTRACT_ADDR"),
+		PrivateKey:   os.Getenv("PRIVATE_KEY"),
 	}
 }
 
