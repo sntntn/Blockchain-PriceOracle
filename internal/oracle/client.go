@@ -169,18 +169,22 @@ func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *bi
 	}
 
 	if receipt.Status == 0 {
-		log.Printf("REVERTED: %s | %s -> %s | CL: %s",
+		entry := fmt.Sprintf(
+			"tx=%s | symbol=%s | sent price=%s | chainlink price=%s",
 			tx.Hash().Hex(),
 			symbol,
 			price.String(),
 			clPrice.String(),
 		)
+
+		GetRevertHistory().Add(entry)
+
+		log.Printf("REVERTED: %s", entry)
 	} else {
-		log.Printf("CONFIRMED: %s | %s -> %s | CL: %s",
+		log.Printf("CONFIRMED: %s | %s -> %s",
 			tx.Hash().Hex(),
 			symbol,
 			price.String(),
-			clPrice.String(),
 		)
 	}
 }
