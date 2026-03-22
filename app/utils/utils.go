@@ -7,34 +7,18 @@ import (
 	"math/big"
 )
 
-// func TestOracle() {
-// 	fmt.Println("Oracle Test - Smart Contract PRICE")
-
-// 	btcPrice, err := oracleClient.GetPrice("BTC")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	fmt.Printf("BTC Onchain: %s\n", btcPrice.String())
-
-// 	btcCL, err := oracleClient.GetChainlinkPrice("BTC")
-// 	if err != nil {
-// 		log.Fatal(err)
-// 	}
-// 	fmt.Printf("BTC Chainlink: %s\n", btcCL.String())
-// }
-
-func CheckPriceCriteria(symbol string, newPrice *big.Int) bool {
+func CheckPriceCriteria(symbol string, newPrice *big.Int) (bool, *big.Int) {
 	oracleClient := oracle.GetOracleClient()
 	onChainPrice, err := oracleClient.GetOnChainPrice(symbol)
 	if err != nil {
 		log.Printf("GetPrice %s: %v", symbol, err)
-		return false
+		return false, nil
 	}
 
 	clPrice, err := oracleClient.GetChainlinkPrice(symbol)
 	if err != nil {
 		log.Printf("GetChainlink %s: %v", symbol, err)
-		return false
+		return false, nil
 	}
 
 	// 2% on chain check
@@ -47,7 +31,7 @@ func CheckPriceCriteria(symbol string, newPrice *big.Int) bool {
 	)
 	if absDiffOnChain.Cmp(minChange) <= 0 {
 		fmt.Printf("%s: %.2f%% < 2%% (skip)\n", symbol, percentChain)
-		return false
+		return false, nil
 	}
 
 	// 20% CL check
@@ -60,11 +44,11 @@ func CheckPriceCriteria(symbol string, newPrice *big.Int) bool {
 	)
 	if absDiffCL.Cmp(maxChange) > 0 {
 		fmt.Printf("%s: %.2f%% > 20%% CL (skip)\n", symbol, percentCL)
-		return false
+		return false, nil
 	}
 
 	fmt.Printf("%s: APPROVED - difference (%.2f%% on Chain, %.2f%% CL)\n", symbol, percentChain, percentCL)
-	return true
+	return true, clPrice
 }
 
 // just for print

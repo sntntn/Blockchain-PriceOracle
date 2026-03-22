@@ -34,14 +34,15 @@ func CoinGeckoLoop() {
 		utils.PrintPrices(&cgPrices)
 
 		for symbol, price := range cgPrices {
-			if utils.CheckPriceCriteria(symbol, price) {
+			// NOTE: returning Chainlink price captured at validation time;
+			// used later for tx result analysis (reverted/confirmed context - task 8)
+			ok, clPrice := utils.CheckPriceCriteria(symbol, price)
+			if ok {
 				log.Printf("%s - PASSED THE CRITERIA - SEND TX NOW!\n", symbol)
 
-				txHash, err := oracle.GetOracleClient().SetPrice(symbol, price)
+				err := oracle.GetOracleClient().SetPrice(symbol, price, clPrice)
 				if err != nil {
 					log.Printf("TX FAILED %s: %v", symbol, err)
-				} else {
-					log.Printf("TX SENT %s: %s", symbol, txHash.Hex()) //temporary - TO DO - see if TX is reverted
 				}
 			}
 		}

@@ -99,36 +99,36 @@ func (c *Client) GetChainlinkPrice(symbol string) (*big.Int, error) {
 	return &price, nil
 }
 
-func (c *Client) SetPrice(symbol string, newPrice *big.Int) (common.Hash, error) {
+func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) error {
 	config := MustLoadConfig()
 
 	privateKey, err := crypto.HexToECDSA(config.PrivateKey)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("invalid private key: %w", err)
+		return fmt.Errorf("invalid private key: %w", err)
 	}
 
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
-		return common.Hash{}, fmt.Errorf("cannot cast public key")
+		return fmt.Errorf("cannot cast public key")
 	}
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
 	nonce, err := c.rpc.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("nonce error: %w", err)
+		return fmt.Errorf("nonce error: %w", err)
 	}
 
 	gasPrice, err := c.rpc.SuggestGasPrice(context.Background())
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("gas price error: %w", err)
+		return fmt.Errorf("gas price error: %w", err)
 	}
 
 	// ABI encode
 	data, err := c.contractABI.Pack("set", symbol, newPrice)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("pack set: %w", err)
+		return fmt.Errorf("pack set: %w", err)
 	}
 
 	tx := types.NewTransaction(
@@ -142,43 +142,45 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int) (common.Hash, error)
 
 	chainID, err := c.rpc.NetworkID(context.Background())
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("chainID error: %w", err)
+		return fmt.Errorf("chainID error: %w", err)
 	}
 
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("sign tx error: %w", err)
+		return fmt.Errorf("sign tx error: %w", err)
 	}
 
 	err = c.rpc.SendTransaction(context.Background(), signedTx)
 	if err != nil {
-		return common.Hash{}, fmt.Errorf("send tx error: %w", err)
+		return fmt.Errorf("send tx error: %w", err)
 	}
 
-	log.Printf("TX SENT: %s", signedTx.Hash().Hex())
-	go c.waitForTxResult(signedTx, symbol, newPrice)
+	log.Printf("TX SENT %s: %s", symbol, signedTx.Hash().Hex())
+	go c.waitForTxResult(signedTx, symbol, newPrice, clPrice)
 
-	return signedTx.Hash(), nil
+	return nil
 }
 
-func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *big.Int) {
+func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *big.Int, clPrice *big.Int) {
 	receipt, err := bind.WaitMined(context.Background(), c.rpc, tx.Hash())
 	if err != nil {
-		log.Printf("TX ERROR: %s | %v", tx.Hash().Hex(), err)
+		log.Printf("WAIT MINED TX ERROR: %s | %v", tx.Hash().Hex(), err)
 		return
 	}
 
 	if receipt.Status == 0 {
-		log.Printf("REVERTED: %s | %s → %s",
+		log.Printf("REVERTED: %s | %s -> %s | CL: %s",
 			tx.Hash().Hex(),
 			symbol,
 			price.String(),
+			clPrice.String(),
 		)
 	} else {
-		log.Printf("CONFIRMED: %s | %s → %s",
+		log.Printf("CONFIRMED: %s | %s -> %s | CL: %s",
 			tx.Hash().Hex(),
 			symbol,
 			price.String(),
+			clPrice.String(),
 		)
 	}
 }
