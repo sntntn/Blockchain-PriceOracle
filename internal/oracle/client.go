@@ -11,6 +11,7 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -155,5 +156,29 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int) (common.Hash, error)
 	}
 
 	log.Printf("TX SENT: %s", signedTx.Hash().Hex())
+	go c.waitForTxResult(signedTx, symbol, newPrice)
+
 	return signedTx.Hash(), nil
+}
+
+func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *big.Int) {
+	receipt, err := bind.WaitMined(context.Background(), c.rpc, tx.Hash())
+	if err != nil {
+		log.Printf("TX ERROR: %s | %v", tx.Hash().Hex(), err)
+		return
+	}
+
+	if receipt.Status == 0 {
+		log.Printf("REVERTED: %s | %s → %s",
+			tx.Hash().Hex(),
+			symbol,
+			price.String(),
+		)
+	} else {
+		log.Printf("CONFIRMED: %s | %s → %s",
+			tx.Hash().Hex(),
+			symbol,
+			price.String(),
+		)
+	}
 }
