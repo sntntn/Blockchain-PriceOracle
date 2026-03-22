@@ -123,3 +123,34 @@ func GetLastNHandler(c *gin.Context) {
 		"count":  len(prices),
 	})
 }
+
+func GetRevertsHandler(c *gin.Context) {
+	n := 100 // default
+
+	if nStr := c.Query("n"); nStr != "" {
+		var err error
+		n, err = strconv.Atoi(nStr)
+		if err != nil || n <= 0 || n > 1000 {
+			c.JSON(http.StatusBadRequest, gin.H{
+				"error": "n must be 1-1000",
+			})
+			return
+		}
+	}
+
+	all := oracle.GetRevertHistory().All()
+
+	// last n
+	start := 0
+	if len(all) > n {
+		start = len(all) - n
+	}
+
+	result := all[start:]
+
+	c.JSON(http.StatusOK, gin.H{
+		"reverts": result,
+		"count":   len(result),
+		"n":       n,
+	})
+}
