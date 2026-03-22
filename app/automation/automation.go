@@ -27,7 +27,6 @@ func CoinGeckoLoop() {
 		cgPrices, err := coingecko.FetchPrices()
 		if err != nil {
 			log.Printf("Fetch error: %v\n", err)
-			// TO DO fallback prices
 			<-ticker.C
 			continue
 		}
@@ -42,8 +41,7 @@ func CoinGeckoLoop() {
 				if err != nil {
 					log.Printf("TX FAILED %s: %v", symbol, err)
 				} else {
-					log.Printf("TX SENT %s: %s", symbol, txHash.Hex())  //temporary - TO DO - see if TX is reverted
-					utils.GetPriceHistory().Add(symbol, price.String()) // TO DO - if not reverted
+					log.Printf("TX SENT %s: %s", symbol, txHash.Hex()) //temporary - TO DO - see if TX is reverted
 				}
 			}
 		}
