@@ -100,6 +100,16 @@ func (c *Client) GetChainlinkPrice(symbol string) (*big.Int, error) {
 }
 
 func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) error {
+
+	// ---------------------------------------------------------------------------
+	ext := GetExternalLockServer()
+	reason, locked := ext.bookSymbolWithTx(symbol)
+	if locked {
+		log.Printf("SKIP: external lock is already active for %s (because of: %s)", symbol, reason)
+		return nil
+	}
+	// ---------------------------------------------------------------------------
+
 	lock := GetTxLock()
 
 	if lock.IsLocked(symbol) {
@@ -172,6 +182,9 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) er
 	}
 
 	log.Printf("TX SENT %s: %s", symbol, signedTx.Hash().Hex())
+	//-----------
+	ext.ProvideTxHashToServer(symbol, signedTx.Hash())
+	//-----------
 	go c.waitForTxResult(signedTx, symbol, newPrice, clPrice)
 
 	return nil

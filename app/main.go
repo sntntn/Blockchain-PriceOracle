@@ -19,6 +19,7 @@ func main() {
 
 	oracle.GetOracleClient()
 	utils.GetPriceHistory()
+	//oracle.GetExternalLockServer() - pokrenemo server za eksterni lock
 
 	go automation.CoinGeckoLoop()
 
