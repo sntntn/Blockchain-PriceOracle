@@ -100,16 +100,26 @@ func (c *Client) GetChainlinkPrice(symbol string) (*big.Int, error) {
 }
 
 func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) error {
+	lock := GetTxLock()
+
+	if lock.IsLocked(symbol) {
+		log.Printf("SKIP sending TX for %s: waiting for previous %s tx to finish", symbol, symbol)
+		return nil
+	}
+	lock.Lock(symbol)
+
 	config := MustLoadConfig()
 
 	privateKey, err := crypto.HexToECDSA(config.PrivateKey)
 	if err != nil {
+		lock.Unlock(symbol)
 		return fmt.Errorf("invalid private key: %w", err)
 	}
 
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
+		lock.Unlock(symbol)
 		return fmt.Errorf("cannot cast public key")
 	}
 
@@ -117,17 +127,20 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) er
 
 	nonce, err := c.rpc.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
+		lock.Unlock(symbol)
 		return fmt.Errorf("nonce error: %w", err)
 	}
 
 	gasPrice, err := c.rpc.SuggestGasPrice(context.Background())
 	if err != nil {
+		lock.Unlock(symbol)
 		return fmt.Errorf("gas price error: %w", err)
 	}
 
 	// ABI encode
 	data, err := c.contractABI.Pack("set", symbol, newPrice)
 	if err != nil {
+		lock.Unlock(symbol)
 		return fmt.Errorf("pack set: %w", err)
 	}
 
@@ -142,16 +155,19 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) er
 
 	chainID, err := c.rpc.NetworkID(context.Background())
 	if err != nil {
+		lock.Unlock(symbol)
 		return fmt.Errorf("chainID error: %w", err)
 	}
 
 	signedTx, err := types.SignTx(tx, types.NewEIP155Signer(chainID), privateKey)
 	if err != nil {
+		lock.Unlock(symbol)
 		return fmt.Errorf("sign tx error: %w", err)
 	}
 
 	err = c.rpc.SendTransaction(context.Background(), signedTx)
 	if err != nil {
+		lock.Unlock(symbol)
 		return fmt.Errorf("send tx error: %w", err)
 	}
 
@@ -162,6 +178,10 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) er
 }
 
 func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *big.Int, clPrice *big.Int) {
+	defer GetTxLock().Unlock(symbol)
+
+	log.Printf("WAITING FOR STATUS of TX %s: %s", symbol, tx.Hash().Hex())
+
 	receipt, err := bind.WaitMined(context.Background(), c.rpc, tx.Hash())
 	if err != nil {
 		log.Printf("WAIT MINED TX ERROR: %s | %v", tx.Hash().Hex(), err)
