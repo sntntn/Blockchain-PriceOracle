@@ -10,9 +10,10 @@ const (
 
 // Symbol mapping (CoinGecko ID -> Contract symbol)
 var SupportedSymbols = map[string]string{
-	"bitcoin":  "BTC",
-	"ethereum": "ETH",
-	// "solana":   "SOL",
+	"bitcoin":   "BTC",
+	"ethereum":  "ETH",
+	"chainlink": "LINK",
+	//"solana":    "SOL",
 }
 
 func GetCoinGeckoIDs() []string {

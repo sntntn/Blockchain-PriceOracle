@@ -9,15 +9,10 @@ import (
 
 func CheckPriceCriteria(symbol string, newPrice *big.Int) (bool, *big.Int) {
 	oracleClient := oracle.GetOracleClient()
-	onChainPrice, err := oracleClient.GetOnChainPrice(symbol)
-	if err != nil {
-		log.Printf("GetPrice %s: %v", symbol, err)
-		return false, nil
-	}
 
-	clPrice, err := oracleClient.GetChainlinkPrice(symbol)
+	onChainPrice, clPrice, err := oracleClient.GetPrices(symbol)
 	if err != nil {
-		log.Printf("GetChainlink %s: %v", symbol, err)
+		log.Printf("GetPrices %s: %v", symbol, err)
 		return false, nil
 	}
 

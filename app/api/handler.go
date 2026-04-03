@@ -28,18 +28,28 @@ func GetPricesHandler(c *gin.Context) {
 
 	oracleClient := oracle.GetOracleClient()
 
-	onChainPrice, err := oracleClient.GetOnChainPrice(symbol)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch onchain price: " + err.Error(),
-		})
-		return
-	}
+	// onChainPrice, err := oracleClient.GetOnChainPrice(symbol)
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{
+	// 		"error": "Failed to fetch onchain price: " + err.Error(),
+	// 	})
+	// 	return
+	// }
 
-	chainlinkPrice, err := oracleClient.GetChainlinkPrice(symbol)
+	// chainlinkPrice, err := oracleClient.GetChainlinkPrice(symbol)
+	// if err != nil {
+	// 	c.JSON(http.StatusInternalServerError, gin.H{
+	// 		"error": "Failed to fetch Chainlink price: " + err.Error(),
+	// 	})
+	// 	return
+	// }
+	onChainPrice, chainlinkPrice, err := oracleClient.GetPrices(symbol)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{
-			"error": "Failed to fetch Chainlink price: " + err.Error(),
+		c.JSON(http.StatusBadRequest, gin.H{
+			"symbol":          symbol,
+			"error":           err.Error(),
+			"onchain_price":   "0",
+			"chainlink_price": "-1",
 		})
 		return
 	}

@@ -3,7 +3,7 @@
 
 [![Go](https://img.shields.io/badge/Go-1.22-blue.svg)](https://golang.org)
 [![Ethereum](https://img.shields.io/badge/Ethereum-Sepolia-orange.svg)](https://sepolia.etherscan.io)
-[![Contract](https://img.shields.io/badge/Contract-Deployed-blueviolet.svg)](https://sepolia.etherscan.io/address/0xFf0fCE651EB5C7C147Af111f89dCB25AB57407e8#code)
+[![Contract](https://img.shields.io/badge/Contract-Deployed-blueviolet.svg)](https://sepolia.etherscan.io/address/0x346a5c608e93Cb1DA471b12F40aEEf1197d9ac5c#code)
 [![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
 
@@ -29,7 +29,7 @@ Create `.env` file in root directory
 ``` env
 ANKR_SEPOLIA_API_KEY=your_ankr_key
 WSS_URL=wss://eth-sepolia.g.alchemy.com/v2/your_key
-CONTRACT_ADDR=0xFf0fCE651EB5C7C147Af111f89dCB25AB57407e8
+CONTRACT_ADDR=0x346a5c608e93Cb1DA471b12F40aEEf1197d9ac5c
 PRIVATE_KEY=0xabcdef...  # 64 hex chars (no 0x prefix)
 ```
 

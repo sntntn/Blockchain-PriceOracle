@@ -61,10 +61,10 @@ func NewClient() (*Client, error) {
 	}, nil
 }
 
-func (c *Client) GetOnChainPrice(symbol string) (*big.Int, error) {
-	data, err := c.contractABI.Pack("getPrice", symbol)
+func (c *Client) GetPrices(symbol string) (onchainPrice, chainlinkPrice *big.Int, err error) {
+	data, err := c.contractABI.Pack("getPrices", symbol)
 	if err != nil {
-		return nil, fmt.Errorf("pack getPrice: %w", err)
+		return nil, nil, fmt.Errorf("pack: %w", err)
 	}
 
 	result, err := c.rpc.CallContract(context.Background(), ethereum.CallMsg{
@@ -72,32 +72,70 @@ func (c *Client) GetOnChainPrice(symbol string) (*big.Int, error) {
 		Data: data,
 	}, nil)
 	if err != nil {
-		return nil, fmt.Errorf("call getPrice: %w", err)
+		if strings.Contains(err.Error(), "UnsupportedSymbol") {
+			log.Printf("Unsupported symbol %s: %v", symbol, err)
+		} else if strings.Contains(err.Error(), "IncompleteRound") {
+			log.Printf("Incomplete round %s: %v", symbol, err)
+		} else if strings.Contains(err.Error(), "InvalidPrice") {
+			log.Printf("Invalid price %s: %v", symbol, err)
+		} else if strings.Contains(err.Error(), "StalePrice") {
+			log.Printf("Stale price %s: %v", symbol, err)
+		}
+		return nil, nil, err
 	}
 
-	var price big.Int
-	price.SetBytes(result)
-	return &price, nil
+	unpacked, err := c.contractABI.Unpack("getPrices", result)
+	if err != nil {
+		return nil, nil, fmt.Errorf("unpack: %w", err)
+	}
+
+	if len(unpacked) != 2 {
+		return nil, nil, fmt.Errorf("expected 2 values")
+	}
+
+	onchainPrice = unpacked[0].(*big.Int)
+	chainlinkPrice = unpacked[1].(*big.Int)
+
+	return onchainPrice, chainlinkPrice, nil
 }
 
-func (c *Client) GetChainlinkPrice(symbol string) (*big.Int, error) {
-	data, err := c.contractABI.Pack("getChainlinkPrice", symbol)
-	if err != nil {
-		return nil, fmt.Errorf("pack getChainlinkPrice: %w", err)
-	}
+// func (c *Client) GetOnChainPrice(symbol string) (*big.Int, error) {
+// 	data, err := c.contractABI.Pack("getPrice", symbol)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("pack getPrice: %w", err)
+// 	}
 
-	result, err := c.rpc.CallContract(context.Background(), ethereum.CallMsg{
-		To:   &c.addr,
-		Data: data,
-	}, nil)
-	if err != nil {
-		return nil, fmt.Errorf("call getChainlinkPrice: %w", err)
-	}
+// 	result, err := c.rpc.CallContract(context.Background(), ethereum.CallMsg{
+// 		To:   &c.addr,
+// 		Data: data,
+// 	}, nil)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("call getPrice: %w", err)
+// 	}
 
-	var price big.Int
-	price.SetBytes(result)
-	return &price, nil
-}
+// 	var price big.Int
+// 	price.SetBytes(result)
+// 	return &price, nil
+// }
+
+// func (c *Client) GetChainlinkPrice(symbol string) (*big.Int, error) {
+// 	data, err := c.contractABI.Pack("getChainlinkPrice", symbol)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("pack getChainlinkPrice: %w", err)
+// 	}
+
+// 	result, err := c.rpc.CallContract(context.Background(), ethereum.CallMsg{
+// 		To:   &c.addr,
+// 		Data: data,
+// 	}, nil)
+// 	if err != nil {
+// 		return nil, fmt.Errorf("call getChainlinkPrice: %w", err)
+// 	}
+
+// 	var price big.Int
+// 	price.SetBytes(result)
+// 	return &price, nil
+// }
 
 func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) error {
 	lock := GetTxLock()
