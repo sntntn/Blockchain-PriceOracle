@@ -1,4 +1,4 @@
-package utils
+package history
 
 import (
 	"container/list"

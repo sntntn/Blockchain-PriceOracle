@@ -1,7 +1,7 @@
 package api
 
 import (
-	"Blockchain-PriceOracle/app/utils"
+	"Blockchain-PriceOracle/app/history"
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
 	"net/http"
@@ -102,7 +102,7 @@ func GetPriceRangeHandler(c *gin.Context) {
 		return
 	}
 
-	prices := utils.GetPriceHistory().Range(symbol, from, to)
+	prices := history.GetPriceHistory().Range(symbol, from, to)
 
 	c.JSON(http.StatusOK, gin.H{
 		"symbol": symbol,
@@ -125,7 +125,7 @@ func GetLastNHandler(c *gin.Context) {
 		}
 	}
 
-	prices := utils.GetPriceHistory().LastN(symbol, n)
+	prices := history.GetPriceHistory().LastN(symbol, n)
 	c.JSON(http.StatusOK, gin.H{
 		"symbol": symbol,
 		"n":      n,

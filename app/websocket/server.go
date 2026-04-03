@@ -1,7 +1,7 @@
 package websocket
 
 import (
-	"Blockchain-PriceOracle/app/utils"
+	"Blockchain-PriceOracle/app/history"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -32,7 +32,7 @@ func SetupWebSocket(r *gin.Engine) {
 }
 
 func PublishPriceUpdate(symbol, price string) {
-	utils.GetPriceHistory().Add(symbol, price)
+	history.GetPriceHistory().Add(symbol, price)
 	msg := gin.H{"event": "price_updated", "symbol": symbol, "price": price}
 	for client := range clients {
 		err := client.WriteJSON(msg)

@@ -4,8 +4,8 @@ import (
 	"log"
 
 	"Blockchain-PriceOracle/app/automation"
+	"Blockchain-PriceOracle/app/history"
 	"Blockchain-PriceOracle/app/server"
-	"Blockchain-PriceOracle/app/utils"
 	"Blockchain-PriceOracle/internal/oracle"
 
 	"github.com/joho/godotenv"
@@ -18,7 +18,7 @@ func main() {
 	}
 
 	oracle.GetOracleClient()
-	utils.GetPriceHistory()
+	history.GetPriceHistory()
 
 	go automation.CoinGeckoLoop()
 

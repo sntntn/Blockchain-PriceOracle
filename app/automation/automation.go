@@ -1,12 +1,13 @@
 package automation
 
 import (
-	"Blockchain-PriceOracle/app/utils"
+	"Blockchain-PriceOracle/app/criteria"
 	"Blockchain-PriceOracle/app/websocket"
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
 	"fmt"
 	"log"
+	"math/big"
 	"os"
 	"time"
 )
@@ -31,12 +32,12 @@ func CoinGeckoLoop() {
 			continue
 		}
 
-		utils.PrintPrices(&cgPrices)
+		PrintPrices(&cgPrices)
 
 		for symbol, price := range cgPrices {
 			// NOTE: returning Chainlink price captured at validation time;
 			// used later for tx result analysis (reverted/confirmed context - task 8)
-			ok, clPrice := utils.CheckPriceCriteria(symbol, price)
+			ok, clPrice := criteria.CheckPriceCriteria(symbol, price)
 			if ok {
 				log.Printf("%s - PASSED THE CRITERIA - SEND TX NOW!\n", symbol)
 
@@ -62,5 +63,11 @@ func StartEthereumListener() {
 		}()
 	} else {
 		log.Println("Skipping Ethereum listener - missing ORACLE_CONTRACT_ADDR or ethereum WSS_URL")
+	}
+}
+
+func PrintPrices(prices *map[string]*big.Int) {
+	for symbol, price := range *prices {
+		fmt.Printf("price -> %s: $%s\n", symbol, price.String())
 	}
 }
