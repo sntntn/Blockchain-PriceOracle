@@ -3,13 +3,32 @@ package websocket
 import (
 	"Blockchain-PriceOracle/app/history"
 	"net/http"
+	"sync"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
-var clients = make(map[*websocket.Conn]bool)
+
+type ClientManager struct {
+	mu      sync.RWMutex
+	clients map[*websocket.Conn]bool
+}
+
+var (
+	clientMgr *ClientManager
+	once      sync.Once
+)
+
+func GetClientManager() *ClientManager {
+	once.Do(func() {
+		clientMgr = &ClientManager{
+			clients: make(map[*websocket.Conn]bool),
+		}
+	})
+	return clientMgr
+}
 
 func SetupWebSocket(r *gin.Engine) {
 	r.GET("/ws", func(c *gin.Context) {
@@ -17,10 +36,18 @@ func SetupWebSocket(r *gin.Engine) {
 		if err != nil {
 			return
 		}
-		defer ws.Close()
 
-		clients[ws] = true
-		defer delete(clients, ws)
+		mgr := GetClientManager()
+		mgr.mu.Lock()
+		mgr.clients[ws] = true
+		mgr.mu.Unlock()
+
+		defer func() {
+			mgr.mu.Lock()
+			delete(mgr.clients, ws)
+			mgr.mu.Unlock()
+			ws.Close()
+		}()
 
 		for {
 			_, _, err := ws.ReadMessage()
@@ -34,11 +61,15 @@ func SetupWebSocket(r *gin.Engine) {
 func PublishPriceUpdate(symbol, price string) {
 	history.GetPriceHistory().Add(symbol, price)
 	msg := gin.H{"event": "price_updated", "symbol": symbol, "price": price}
-	for client := range clients {
+
+	mgr := GetClientManager()
+	mgr.mu.RLock()
+	defer mgr.mu.RUnlock()
+
+	for client := range mgr.clients {
 		err := client.WriteJSON(msg)
 		if err != nil {
 			client.Close()
-			delete(clients, client)
 		}
 	}
 }
