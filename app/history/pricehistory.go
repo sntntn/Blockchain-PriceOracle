@@ -33,7 +33,7 @@ func GetPriceHistory() *PriceHistory {
 	return priceHistory
 }
 
-func (h *PriceHistory) Add(symbol string, price string) {
+func (h *PriceHistory) Add(symbol string, price string, timestamp time.Time) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -49,13 +49,13 @@ func (h *PriceHistory) Add(symbol string, price string) {
 	}
 
 	l.PushBack(PricePoint{
-		Timestamp: time.Now(),
+		Timestamp: timestamp,
 		Price:     price,
 	})
 }
 
 // TO DO - pass time argument
-func (h *PriceHistory) AddFront(symbol string, price string) error {
+func (h *PriceHistory) AddFront(symbol string, price string, timestamp time.Time) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 
@@ -70,7 +70,7 @@ func (h *PriceHistory) AddFront(symbol string, price string) error {
 	}
 
 	l.PushFront(PricePoint{
-		Timestamp: time.Now(), // TO DO TEMPORARY BUG - set the mining time of this block otherwise this is the time of sync and range won't work
+		Timestamp: timestamp,
 		Price:     price,
 	})
 

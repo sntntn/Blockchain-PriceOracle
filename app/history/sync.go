@@ -79,7 +79,9 @@ func (h *PriceHistory) ReverseSyncFromContract(oracleClient *oracle.Client, stop
 				continue
 			}
 
-			if err := h.AddFront(eventData.Symbol, eventData.NewPrice.String()); err != nil {
+			eventTime := time.Unix(int64(vlog.BlockTimestamp), 0)
+
+			if err := h.AddFront(eventData.Symbol, eventData.NewPrice.String(), eventTime); err != nil {
 				if !fullSymbols[eventData.Symbol] {
 					// log.Printf("%s FULL (%d/%d)", // TO DO - reduce noise
 					// 	eventData.Symbol, h.data[eventData.Symbol].Len(), MAX_HISTORY_SIZE)

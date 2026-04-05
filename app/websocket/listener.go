@@ -6,6 +6,7 @@ import (
 	"log"
 	"math/big"
 	"strings"
+	"time"
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -67,7 +68,8 @@ func StartEventListener(oracleAddr, wsURL string) {
 				eventData.NewPrice.String(),
 			)
 
-			PublishPriceUpdate(eventData.Symbol, eventData.NewPrice.String())
+			eventTime := time.Unix(int64(vlog.BlockTimestamp), 0)
+			PublishPriceUpdate(eventData.Symbol, eventData.NewPrice.String(), eventTime)
 		}
 	}
 }

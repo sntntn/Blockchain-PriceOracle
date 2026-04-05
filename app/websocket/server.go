@@ -4,6 +4,7 @@ import (
 	"Blockchain-PriceOracle/app/history"
 	"net/http"
 	"sync"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
@@ -58,8 +59,8 @@ func SetupWebSocket(r *gin.Engine) {
 	})
 }
 
-func PublishPriceUpdate(symbol, price string) {
-	history.GetPriceHistory().Add(symbol, price)
+func PublishPriceUpdate(symbol, price string, timestamp time.Time) {
+	history.GetPriceHistory().Add(symbol, price, timestamp)
 	msg := gin.H{"event": "price_updated", "symbol": symbol, "price": price}
 
 	mgr := GetClientManager()
