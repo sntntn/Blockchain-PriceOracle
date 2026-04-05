@@ -2,6 +2,7 @@ package history
 
 import (
 	"container/list"
+	"fmt"
 	"sync"
 	"time"
 )
@@ -51,6 +52,29 @@ func (h *PriceHistory) Add(symbol string, price string) {
 		Timestamp: time.Now(),
 		Price:     price,
 	})
+}
+
+// TO DO - pass time argument
+func (h *PriceHistory) AddFront(symbol string, price string) error {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+
+	l, exists := h.data[symbol]
+	if !exists {
+		l = list.New()
+		h.data[symbol] = l
+	}
+
+	if l.Len() >= MAX_HISTORY_SIZE {
+		return fmt.Errorf("history full for %s (max %d)", symbol, MAX_HISTORY_SIZE)
+	}
+
+	l.PushFront(PricePoint{
+		Timestamp: time.Now(), // TO DO TEMPORARY BUG - set the mining time of this block otherwise this is the time of sync and range won't work
+		Price:     price,
+	})
+
+	return nil
 }
 
 func (h *PriceHistory) Range(symbol string, from, to time.Time) []PricePoint {

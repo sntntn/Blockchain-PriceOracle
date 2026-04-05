@@ -4,21 +4,12 @@ import (
 	"log"
 
 	"Blockchain-PriceOracle/app/automation"
-	"Blockchain-PriceOracle/app/history"
 	"Blockchain-PriceOracle/app/server"
-	"Blockchain-PriceOracle/internal/oracle"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
 
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
-	}
-
-	oracle.GetOracleClient()
-	history.GetPriceHistory()
+	automation.Init()
 
 	go automation.CoinGeckoLoop()
 

@@ -35,14 +35,15 @@ func GetOracleClient() *Client {
 }
 
 type Client struct {
-	rpc         *ethclient.Client
-	addr        common.Address
-	contractABI *abi.ABI
+	rpc             *ethclient.Client
+	addr            common.Address
+	deploymentBlock uint64
+	contractABI     *abi.ABI
 }
 
 func NewClient() (*Client, error) {
 
-	config := MustLoadConfig()
+	config := LoadConfig()
 
 	conn, err := ethclient.Dial(config.SepoliaRPC)
 	if err != nil {
@@ -55,10 +56,23 @@ func NewClient() (*Client, error) {
 	}
 
 	return &Client{
-		rpc:         conn,
-		addr:        common.HexToAddress(config.ContractAddr),
-		contractABI: &contractAbi,
+		rpc:             conn,
+		addr:            common.HexToAddress(config.ContractAddr),
+		deploymentBlock: config.DeploymentBlock,
+		contractABI:     &contractAbi,
 	}, nil
+}
+
+func (c *Client) DeploymentBlock() uint64 {
+	return c.deploymentBlock
+}
+
+func (c *Client) Address() common.Address {
+	return c.addr
+}
+
+func (c *Client) RPC() *ethclient.Client {
+	return c.rpc
 }
 
 func (c *Client) GetPrices(symbol string) (onchainPrice, chainlinkPrice *big.Int, err error) {
@@ -108,7 +122,7 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) er
 	}
 	lock.Lock(symbol)
 
-	config := MustLoadConfig()
+	config := LoadConfig()
 
 	privateKey, err := crypto.HexToECDSA(config.PrivateKey)
 	if err != nil {

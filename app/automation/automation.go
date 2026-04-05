@@ -2,6 +2,7 @@ package automation
 
 import (
 	"Blockchain-PriceOracle/app/criteria"
+	"Blockchain-PriceOracle/app/history"
 	"Blockchain-PriceOracle/app/websocket"
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
@@ -10,7 +11,30 @@ import (
 	"math/big"
 	"os"
 	"time"
+
+	"github.com/joho/godotenv"
 )
+
+func Init() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
+
+	history := history.GetPriceHistory()
+	oracleClient := oracle.GetOracleClient()
+
+	fromBlock := oracleClient.DeploymentBlock()
+
+	// latestBlock, err := oracleClient.RPC().BlockNumber(context.Background())
+	// if err != nil {
+	// 	return fmt.Errorf("latest block: %w", err)
+	// }
+	var latestBlock uint64
+	latestBlock = 10588392
+	if err := history.ReverseSyncFromContract(oracleClient, fromBlock, latestBlock); err != nil {
+		log.Printf("Backfill failed: %v", err)
+	}
+}
 
 func CoinGeckoLoop() {
 	time.Sleep(3 * time.Second) //to separate these logs from logs at app start
