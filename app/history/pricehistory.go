@@ -54,7 +54,6 @@ func (h *PriceHistory) Add(symbol string, price string, timestamp time.Time) {
 	})
 }
 
-// TO DO - pass time argument
 func (h *PriceHistory) AddFront(symbol string, price string, timestamp time.Time) error {
 	h.mu.Lock()
 	defer h.mu.Unlock()

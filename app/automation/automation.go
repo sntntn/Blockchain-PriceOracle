@@ -6,6 +6,7 @@ import (
 	"Blockchain-PriceOracle/app/websocket"
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
+	"context"
 	"fmt"
 	"log"
 	"math/big"
@@ -24,20 +25,20 @@ func Init() {
 	oracleClient := oracle.GetOracleClient()
 
 	fromBlock := oracleClient.DeploymentBlock()
-	currentLatestBlock := uint64(10588392)
-	// currentLatestBlock, err := oracleClient.RPC().BlockNumber(context.Background())
-	// if err != nil {
-	// 	return fmt.Errorf("latest block: %w", err)
-	// }
+	currentLatestBlock, err := oracleClient.RPC().BlockNumber(context.Background())
+	if err != nil {
+		log.Printf("error on latest block fetch: %v", err)
+		return
+	}
 
+	fromBlock = currentLatestBlock - 60 // TO DO - REMOVE THIS LINE IN PRODUCTION - rewritten just for development
 	if err := history.ReverseSyncFromContract(oracleClient, fromBlock, currentLatestBlock); err != nil {
 		log.Printf("Reverse Backfill Failed: %v", err)
 	}
 
-	// fromBlock = currentLatestBlock
-	fromBlock = uint64(10596423)
+	fromBlock = currentLatestBlock
 	if err := history.ForwardSyncFromContract(oracleClient, fromBlock); err != nil {
-		log.Printf("Reverse Backfill Failed: %v", err)
+		log.Printf("Forward Sync Failed: %v", err)
 	}
 
 }
