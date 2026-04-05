@@ -24,16 +24,22 @@ func Init() {
 	oracleClient := oracle.GetOracleClient()
 
 	fromBlock := oracleClient.DeploymentBlock()
-
-	// latestBlock, err := oracleClient.RPC().BlockNumber(context.Background())
+	currentLatestBlock := uint64(10588392)
+	// currentLatestBlock, err := oracleClient.RPC().BlockNumber(context.Background())
 	// if err != nil {
 	// 	return fmt.Errorf("latest block: %w", err)
 	// }
-	var latestBlock uint64
-	latestBlock = 10588392
-	if err := history.ReverseSyncFromContract(oracleClient, fromBlock, latestBlock); err != nil {
-		log.Printf("Backfill failed: %v", err)
+
+	if err := history.ReverseSyncFromContract(oracleClient, fromBlock, currentLatestBlock); err != nil {
+		log.Printf("Reverse Backfill Failed: %v", err)
 	}
+
+	// fromBlock = currentLatestBlock
+	fromBlock = uint64(10596423)
+	if err := history.ForwardSyncFromContract(oracleClient, fromBlock); err != nil {
+		log.Printf("Reverse Backfill Failed: %v", err)
+	}
+
 }
 
 func CoinGeckoLoop() {

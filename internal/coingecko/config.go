@@ -13,7 +13,7 @@ var SupportedSymbols = map[string]string{
 	"bitcoin":   "BTC",
 	"ethereum":  "ETH",
 	"chainlink": "LINK",
-	//"solana":    "SOL",
+	// add new symbol here
 }
 
 func GetCoinGeckoIDs() []string {
