@@ -12,17 +12,9 @@ import (
 	"math/big"
 	"os"
 	"time"
-
-	"github.com/joho/godotenv"
 )
 
-func Init() {
-	if err := godotenv.Load(); err != nil {
-		log.Fatal(err)
-	}
-
-	history := history.GetPriceHistory()
-	oracleClient := oracle.GetOracleClient()
+func Sync(oracleClient *oracle.Client, priceHistory *history.PriceHistory) {
 
 	fromBlock := oracleClient.DeploymentBlock()
 	currentLatestBlock, err := oracleClient.RPC().BlockNumber(context.Background())
@@ -32,18 +24,18 @@ func Init() {
 	}
 
 	fromBlock = currentLatestBlock - 60 // TO DO - REMOVE THIS LINE IN PRODUCTION - rewritten just for development
-	if err := history.ReverseSyncFromContract(oracleClient, fromBlock, currentLatestBlock); err != nil {
+	if err := priceHistory.ReverseSyncFromContract(oracleClient, fromBlock, currentLatestBlock); err != nil {
 		log.Printf("Reverse Backfill Failed: %v", err)
 	}
 
 	fromBlock = currentLatestBlock
-	if err := history.ForwardSyncFromContract(oracleClient, fromBlock); err != nil {
+	if err := priceHistory.ForwardSyncFromContract(oracleClient, fromBlock); err != nil {
 		log.Printf("Forward Sync Failed: %v", err)
 	}
 
 }
 
-func CoinGeckoLoop() {
+func CoinGeckoLoop(oracleClient *oracle.Client) {
 	time.Sleep(3 * time.Second) //to separate these logs from logs at app start
 
 	ticker := time.NewTicker(1 * time.Minute)
@@ -68,11 +60,11 @@ func CoinGeckoLoop() {
 		for symbol, price := range cgPrices {
 			// NOTE: returning Chainlink price captured at validation time;
 			// used later for tx result analysis (reverted/confirmed context - task 8)
-			ok, clPrice := criteria.CheckPriceCriteria(symbol, price)
+			ok, clPrice := criteria.CheckPriceCriteria(oracleClient, symbol, price)
 			if ok {
 				log.Printf("%s - PASSED THE CRITERIA - SEND TX NOW!\n", symbol)
 
-				err := oracle.GetOracleClient().SetPrice(symbol, price, clPrice)
+				err := oracleClient.SetPrice(symbol, price, clPrice)
 				if err != nil {
 					log.Printf("TX FAILED %s: %v", symbol, err)
 				}

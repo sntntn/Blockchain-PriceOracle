@@ -23,10 +23,10 @@ var (
 	once         sync.Once
 )
 
-func GetOracleClient() *Client {
+func GetOracleClient(reverts RevertHistoryInterface) *Client {
 	once.Do(func() {
 		var err error
-		oracleClient, err = NewClient()
+		oracleClient, err = NewClient(reverts)
 		if err != nil {
 			log.Fatalf("Oracle client init: %v", err)
 		}
@@ -39,9 +39,11 @@ type Client struct {
 	addr            common.Address
 	deploymentBlock uint64
 	contractABI     *abi.ABI
+
+	reverts RevertHistoryInterface
 }
 
-func NewClient() (*Client, error) {
+func NewClient(reverts RevertHistoryInterface) (*Client, error) {
 
 	config := LoadConfig()
 
@@ -60,6 +62,7 @@ func NewClient() (*Client, error) {
 		addr:            common.HexToAddress(config.ContractAddr),
 		deploymentBlock: config.DeploymentBlock,
 		contractABI:     &contractAbi,
+		reverts:         reverts,
 	}, nil
 }
 
@@ -211,7 +214,7 @@ func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *bi
 			clPrice.String(),
 		)
 
-		GetRevertHistory().Add(entry)
+		c.reverts.Add(entry)
 
 		log.Printf("REVERTED: %s", entry)
 	} else {

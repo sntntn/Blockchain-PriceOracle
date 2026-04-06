@@ -7,8 +7,7 @@ import (
 	"math/big"
 )
 
-func CheckPriceCriteria(symbol string, newPrice *big.Int) (bool, *big.Int) {
-	oracleClient := oracle.GetOracleClient()
+func CheckPriceCriteria(oracleClient *oracle.Client, symbol string, newPrice *big.Int) (bool, *big.Int) {
 
 	onChainPrice, clPrice, err := oracleClient.GetPrices(symbol)
 	if err != nil {

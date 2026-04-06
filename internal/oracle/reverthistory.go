@@ -4,10 +4,18 @@ import "sync"
 
 const MAX_REVERT_HISTORY = 1000
 
+type RevertHistoryInterface interface {
+	Add(entry string)
+	All() []string
+}
+
 type RevertHistory struct {
 	mu   sync.RWMutex
 	data []string
 }
+
+// compile-time check
+var _ RevertHistoryInterface = (*RevertHistory)(nil)
 
 var (
 	revertHistory *RevertHistory

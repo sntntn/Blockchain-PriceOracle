@@ -4,16 +4,27 @@ import (
 	"log"
 
 	"Blockchain-PriceOracle/app/automation"
+	"Blockchain-PriceOracle/app/history"
 	"Blockchain-PriceOracle/app/server"
+	"Blockchain-PriceOracle/internal/oracle"
+
+	"github.com/joho/godotenv"
 )
 
 func main() {
+	if err := godotenv.Load(); err != nil {
+		log.Fatal(err)
+	}
 
-	automation.Init()
+	priceHistory := history.GetPriceHistory()
+	revertHistory := oracle.GetRevertHistory()
+	oracleClient := oracle.GetOracleClient(revertHistory)
 
-	go automation.CoinGeckoLoop()
+	automation.Sync(oracleClient, priceHistory)
 
-	server := server.SetupServer()
+	go automation.CoinGeckoLoop(oracleClient)
+
+	server := server.SetupServer(oracleClient, priceHistory, revertHistory)
 	automation.StartEthereumListener()
 
 	log.Println("API Server: http://localhost:8080")

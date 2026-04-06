@@ -3,7 +3,7 @@ package api
 import (
 	"Blockchain-PriceOracle/app/history"
 	"Blockchain-PriceOracle/internal/coingecko"
-	"Blockchain-PriceOracle/internal/oracle"
+	"math/big"
 	"net/http"
 	"strconv"
 	"time"
@@ -23,27 +23,29 @@ type RangeRequest struct {
 	To   string `json:"to" binding:"required"`   // "2026-03-22T17:00:00Z"
 }
 
-func GetPricesHandler(c *gin.Context) {
+type OracleInterface interface {
+	GetPrices(symbol string) (*big.Int, *big.Int, error)
+}
+
+type PriceHistoryInterface interface {
+	Range(symbol string, from, to time.Time) []history.PricePoint
+	LastN(symbol string, n int) []history.PricePoint
+}
+
+type RevertHistoryInterface interface {
+	All() []string
+}
+
+type Handler struct {
+	OracleClient OracleInterface
+	PriceHistory PriceHistoryInterface
+	Reverts      RevertHistoryInterface
+}
+
+func (h *Handler) GetPricesHandler(c *gin.Context) {
 	symbol := c.Param("symbol")
 
-	oracleClient := oracle.GetOracleClient()
-
-	// onChainPrice, err := oracleClient.GetOnChainPrice(symbol)
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{
-	// 		"error": "Failed to fetch onchain price: " + err.Error(),
-	// 	})
-	// 	return
-	// }
-
-	// chainlinkPrice, err := oracleClient.GetChainlinkPrice(symbol)
-	// if err != nil {
-	// 	c.JSON(http.StatusInternalServerError, gin.H{
-	// 		"error": "Failed to fetch Chainlink price: " + err.Error(),
-	// 	})
-	// 	return
-	// }
-	onChainPrice, chainlinkPrice, err := oracleClient.GetPrices(symbol)
+	onChainPrice, chainlinkPrice, err := h.OracleClient.GetPrices(symbol)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{
 			"symbol":          symbol,
@@ -80,7 +82,7 @@ func GetPricesHandler(c *gin.Context) {
 	c.JSON(http.StatusOK, response)
 }
 
-func GetPriceRangeHandler(c *gin.Context) {
+func (h *Handler) GetPriceRangeHandler(c *gin.Context) {
 	symbol := c.Param("symbol")
 
 	var req RangeRequest
@@ -102,7 +104,7 @@ func GetPriceRangeHandler(c *gin.Context) {
 		return
 	}
 
-	prices := history.GetPriceHistory().Range(symbol, from, to)
+	prices := h.PriceHistory.Range(symbol, from, to)
 
 	c.JSON(http.StatusOK, gin.H{
 		"symbol": symbol,
@@ -113,7 +115,7 @@ func GetPriceRangeHandler(c *gin.Context) {
 	})
 }
 
-func GetLastNHandler(c *gin.Context) {
+func (h *Handler) GetLastNHandler(c *gin.Context) {
 	symbol := c.Param("symbol")
 	n := 10 // Default
 	if nStr := c.Query("n"); nStr != "" {
@@ -125,7 +127,7 @@ func GetLastNHandler(c *gin.Context) {
 		}
 	}
 
-	prices := history.GetPriceHistory().LastN(symbol, n)
+	prices := h.PriceHistory.LastN(symbol, n)
 	c.JSON(http.StatusOK, gin.H{
 		"symbol": symbol,
 		"n":      n,
@@ -134,7 +136,7 @@ func GetLastNHandler(c *gin.Context) {
 	})
 }
 
-func GetRevertsHandler(c *gin.Context) {
+func (h *Handler) GetRevertsHandler(c *gin.Context) {
 	n := 100 // default
 
 	if nStr := c.Query("n"); nStr != "" {
@@ -148,7 +150,7 @@ func GetRevertsHandler(c *gin.Context) {
 		}
 	}
 
-	all := oracle.GetRevertHistory().All()
+	all := h.Reverts.All()
 
 	// last n
 	start := 0
