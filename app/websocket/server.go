@@ -1,7 +1,6 @@
 package websocket
 
 import (
-	"Blockchain-PriceOracle/app/history"
 	"net/http"
 	"sync"
 	"time"
@@ -9,6 +8,10 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/gorilla/websocket"
 )
+
+type PricePublisher interface {
+	Add(symbol, price string, timestamp time.Time)
+}
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
@@ -59,8 +62,8 @@ func SetupWebSocket(r *gin.Engine) {
 	})
 }
 
-func PublishPriceUpdate(symbol, price string, timestamp time.Time) {
-	history.GetPriceHistory().Add(symbol, price, timestamp)
+func PublishPriceUpdate(pricePublisher PricePublisher, symbol, price string, timestamp time.Time) {
+	pricePublisher.Add(symbol, price, timestamp)
 	msg := gin.H{"event": "price_updated", "symbol": symbol, "price": price}
 
 	mgr := GetClientManager()

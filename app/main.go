@@ -25,7 +25,7 @@ func main() {
 	go automation.CoinGeckoLoop(oracleClient)
 
 	server := server.SetupServer(oracleClient, priceHistory, revertHistory)
-	automation.StartEthereumListener()
+	automation.StartEthereumListener(priceHistory)
 
 	log.Println("API Server: http://localhost:8080")
 
