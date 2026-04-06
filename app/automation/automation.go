@@ -75,14 +75,14 @@ func CoinGeckoLoop(oracleClient *oracle.Client) {
 	}
 }
 
-func StartEthereumListener(pricePublisher websocket.PricePublisher) {
+func StartEthereumListener(pricePublisher websocket.PricePublisher, mgr *websocket.ClientManager) {
 	wssURL := os.Getenv("WSS_URL")
 	contractAddr := os.Getenv("CONTRACT_ADDR")
 
 	if contractAddr != "" && wssURL != "" {
 		go func() {
 			log.Printf("Starting Ethereum listener: %s", wssURL)
-			websocket.StartEventListener(pricePublisher, contractAddr, wssURL)
+			websocket.StartEventListener(pricePublisher, mgr, contractAddr, wssURL)
 		}()
 	} else {
 		log.Println("Skipping Ethereum listener - missing ORACLE_CONTRACT_ADDR or ethereum WSS_URL")

@@ -34,14 +34,13 @@ func GetClientManager() *ClientManager {
 	return clientMgr
 }
 
-func SetupWebSocket(r *gin.Engine) {
+func SetupWebSocket(r *gin.Engine, mgr *ClientManager) {
 	r.GET("/ws", func(c *gin.Context) {
 		ws, err := upgrader.Upgrade(c.Writer, c.Request, nil)
 		if err != nil {
 			return
 		}
 
-		mgr := GetClientManager()
 		mgr.mu.Lock()
 		mgr.clients[ws] = true
 		mgr.mu.Unlock()
@@ -62,11 +61,10 @@ func SetupWebSocket(r *gin.Engine) {
 	})
 }
 
-func PublishPriceUpdate(pricePublisher PricePublisher, symbol, price string, timestamp time.Time) {
+func PublishPriceUpdate(pricePublisher PricePublisher, mgr *ClientManager, symbol, price string, timestamp time.Time) {
 	pricePublisher.Add(symbol, price, timestamp)
 	msg := gin.H{"event": "price_updated", "symbol": symbol, "price": price}
 
-	mgr := GetClientManager()
 	mgr.mu.RLock()
 	defer mgr.mu.RUnlock()
 

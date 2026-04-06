@@ -15,7 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
-func StartEventListener(pricePublisher PricePublisher, oracleAddr, wsURL string) {
+func StartEventListener(pricePublisher PricePublisher, mgr *ClientManager, oracleAddr, wsURL string) {
 	client, err := ethclient.Dial(wsURL)
 	if err != nil {
 		log.Fatal(err)
@@ -69,7 +69,7 @@ func StartEventListener(pricePublisher PricePublisher, oracleAddr, wsURL string)
 			)
 
 			eventTime := time.Unix(int64(vlog.BlockTimestamp), 0)
-			PublishPriceUpdate(pricePublisher, eventData.Symbol, eventData.NewPrice.String(), eventTime)
+			PublishPriceUpdate(pricePublisher, mgr, eventData.Symbol, eventData.NewPrice.String(), eventTime)
 		}
 	}
 }

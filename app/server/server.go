@@ -10,7 +10,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupServer(oracleClient *oracle.Client, priceHistory *history.PriceHistory, revertHistory *oracle.RevertHistory) *gin.Engine {
+func SetupServer(oracleClient *oracle.Client, priceHistory *history.PriceHistory, revertHistory *oracle.RevertHistory, mgr *websocket.ClientManager) *gin.Engine {
 	r := gin.Default()
 
 	h := &api.Handler{
@@ -28,7 +28,7 @@ func SetupServer(oracleClient *oracle.Client, priceHistory *history.PriceHistory
 		v1.GET("/health", healthHandler)
 	}
 
-	websocket.SetupWebSocket(r)
+	websocket.SetupWebSocket(r, mgr)
 
 	return r
 }
