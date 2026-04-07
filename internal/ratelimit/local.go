@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"context"
 	"time"
 
 	"golang.org/x/time/rate"
@@ -26,4 +27,8 @@ func (l *LocalLimiter) Allow() (bool, time.Duration, error) {
 	r.Cancel()
 
 	return false, delay, nil
+}
+
+func (l *LocalLimiter) Wait(ctx context.Context) error {
+	return l.limiter.Wait(ctx)
 }

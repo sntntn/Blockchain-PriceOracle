@@ -29,9 +29,14 @@ func GetOracleClient(reverts *RevertHistory, limiter ratelimit.Limiter) (*Client
 	once.Do(func() {
 		config := LoadConfig()
 
-		conn, err := ethclient.Dial(config.SepoliaRPC)
+		conn, err := ethclient.Dial(config.SepoliaRpc)
 		if err != nil {
 			initErr = fmt.Errorf("RPC dial: %w", err)
+			return
+		}
+		connSync, err := ethclient.Dial(config.SepoliaRpcSync)
+		if err != nil {
+			initErr = fmt.Errorf("RPC SYNC dial: %w", err)
 			return
 		}
 
@@ -50,6 +55,7 @@ func GetOracleClient(reverts *RevertHistory, limiter ratelimit.Limiter) (*Client
 			config.DeploymentBlock,
 			&contractAbi,
 			conn,
+			connSync,
 		)
 		if err != nil {
 			initErr = fmt.Errorf("Oracle client init: %w", err)
@@ -62,6 +68,7 @@ func GetOracleClient(reverts *RevertHistory, limiter ratelimit.Limiter) (*Client
 
 type Client struct {
 	rpc             *ethclient.Client
+	rpcSync         *ethclient.Client
 	addr            common.Address
 	deploymentBlock uint64
 	contractABI     *abi.ABI
@@ -70,9 +77,10 @@ type Client struct {
 	limiter ratelimit.Limiter
 }
 
-func NewOracleClient(reverts RevertHistoryInterface, limiter ratelimit.Limiter, addr common.Address, deploymentBlock uint64, contractAbi *abi.ABI, conn *ethclient.Client) (*Client, error) {
+func NewOracleClient(reverts RevertHistoryInterface, limiter ratelimit.Limiter, addr common.Address, deploymentBlock uint64, contractAbi *abi.ABI, conn *ethclient.Client, connSync *ethclient.Client) (*Client, error) {
 	return &Client{
 		rpc:             conn,
+		rpcSync:         connSync,
 		addr:            addr,
 		deploymentBlock: deploymentBlock,
 		contractABI:     contractAbi,
@@ -89,7 +97,7 @@ func (c *Client) Address() common.Address {
 	return c.addr
 }
 
-func (c *Client) RPC() *ethclient.Client {
+func (c *Client) RpcSync() *ethclient.Client {
 	return c.rpc
 }
 

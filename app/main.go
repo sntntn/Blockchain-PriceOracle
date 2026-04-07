@@ -20,7 +20,7 @@ func main() {
 
 	priceHistory := history.GetPriceHistory()
 	revertHistory := oracle.GetRevertHistory()
-	oracleLimiter, cgLimiter := automation.InitLimiters()
+	oracleLimiter, syncLimiter, cgLimiter := automation.InitLimiters()
 
 	oracleClient, err := oracle.GetOracleClient(revertHistory, oracleLimiter)
 	if err != nil {
@@ -33,7 +33,7 @@ func main() {
 
 	clientWebsocketsManager := websocket.GetClientManager()
 
-	automation.Sync(oracleClient, priceHistory)
+	automation.Sync(oracleClient, priceHistory, syncLimiter)
 
 	go automation.CoinGeckoLoop(oracleClient, cgClient)
 

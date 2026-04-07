@@ -11,20 +11,25 @@ const (
 )
 
 type Config struct {
-	SepoliaRPC      string
+	SepoliaRpc      string
+	SepoliaRpcSync  string
 	ContractAddr    string
 	DeploymentBlock uint64
 	PrivateKey      string
 }
 
+func buildSepoliaRPC(apiKey string) string {
+	if apiKey == "" {
+		panic("ANKR API key not provided")
+	}
+
+	return "https://rpc.ankr.com/eth_sepolia/" + apiKey
+}
+
 func LoadConfig() Config {
 
-	apiKey := os.Getenv("ANKR_SEPOLIA_API_KEY")
-	if apiKey == "" {
-		panic("ANKR_SEPOLIA_API_KEY not set")
-	}
-	rpc := "https://rpc.ankr.com/eth_sepolia/"
-	rpc += apiKey
+	rpc := buildSepoliaRPC(os.Getenv("ANKR_SEPOLIA_API_KEY"))
+	rpcSync := buildSepoliaRPC(os.Getenv("ANKR_SEPOLIA_SYNC_API_KEY"))
 
 	deploymentBlockStr := os.Getenv("DEPLOYMENT_BLOCK")
 	var deploymentBlock uint64
@@ -37,7 +42,8 @@ func LoadConfig() Config {
 	}
 
 	return Config{
-		SepoliaRPC:      rpc,
+		SepoliaRpc:      rpc,
+		SepoliaRpcSync:  rpcSync,
 		ContractAddr:    os.Getenv("CONTRACT_ADDR"),
 		DeploymentBlock: deploymentBlock,
 		PrivateKey:      os.Getenv("PRIVATE_KEY"),

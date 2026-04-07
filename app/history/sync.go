@@ -3,6 +3,7 @@ package history
 import (
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
+	"Blockchain-PriceOracle/internal/ratelimit"
 	"context"
 	"fmt"
 	"log"
@@ -21,7 +22,7 @@ const (
 	BACKOFF_MS           = 100
 )
 
-func (h *PriceHistory) ReverseSyncFromContract(oracleClient *oracle.Client, stopBlock uint64, latestBlock uint64) error {
+func (h *PriceHistory) ReverseSyncFromContract(oracleClient *oracle.Client, stopBlock uint64, latestBlock uint64, limiter ratelimit.Limiter) error {
 
 	log.Printf("REVERSE BACKFILL: %d -> %d", latestBlock, stopBlock)
 
@@ -53,7 +54,10 @@ func (h *PriceHistory) ReverseSyncFromContract(oracleClient *oracle.Client, stop
 			Topics:    [][]common.Hash{{eventSig}},
 		}
 
-		logs, err := oracleClient.RPC().FilterLogs(context.Background(), query)
+		if err := limiter.Wait(context.Background()); err != nil {
+			return err
+		}
+		logs, err := oracleClient.RpcSync().FilterLogs(context.Background(), query)
 		if err != nil {
 			log.Printf("Reverse Batch #%d failed: %v", batchCount, err)
 			time.Sleep(time.Duration(BACKOFF_MS) * time.Millisecond)
@@ -112,7 +116,7 @@ func (h *PriceHistory) ReverseSyncFromContract(oracleClient *oracle.Client, stop
 	return nil
 }
 
-func (h *PriceHistory) ForwardSyncFromContract(oracleClient *oracle.Client, startBlock uint64) error {
+func (h *PriceHistory) ForwardSyncFromContract(oracleClient *oracle.Client, startBlock uint64, limiter ratelimit.Limiter) error {
 	log.Printf("(LATEST) FORWARD SYNC: starting from block %d", startBlock)
 
 	contractAbi, err := abi.JSON(strings.NewReader(oracle.ContractABI))
@@ -127,7 +131,10 @@ func (h *PriceHistory) ForwardSyncFromContract(oracleClient *oracle.Client, star
 	batchCount := 0
 
 	for {
-		latestBlock, err := oracleClient.RPC().BlockNumber(context.Background())
+		if err := limiter.Wait(context.Background()); err != nil {
+			return err
+		}
+		latestBlock, err := oracleClient.RpcSync().BlockNumber(context.Background())
 		if err != nil {
 			return fmt.Errorf("latest block: %w", err)
 		}
@@ -151,7 +158,10 @@ func (h *PriceHistory) ForwardSyncFromContract(oracleClient *oracle.Client, star
 			Topics:    [][]common.Hash{{eventSig}},
 		}
 
-		logs, err := oracleClient.RPC().FilterLogs(context.Background(), query)
+		if err := limiter.Wait(context.Background()); err != nil {
+			return err
+		}
+		logs, err := oracleClient.RpcSync().FilterLogs(context.Background(), query)
 		if err != nil {
 			log.Printf("Forward Batch #%d failed: %v", batchCount, err)
 			time.Sleep(time.Duration(BACKOFF_MS) * time.Millisecond)

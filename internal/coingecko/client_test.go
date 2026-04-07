@@ -1,6 +1,7 @@
 package coingecko
 
 import (
+	"context"
 	"math/big"
 	"strings"
 	"testing"
@@ -15,6 +16,10 @@ type MockLimiter struct {
 
 func (m *MockLimiter) Allow() (bool, time.Duration, error) {
 	return m.allow, m.delay, m.err
+}
+
+func (m *MockLimiter) Wait(_ context.Context) error {
+	return nil
 }
 
 func MockFetchJSON_1(url string) (Response, error) {

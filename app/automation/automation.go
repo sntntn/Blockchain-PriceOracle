@@ -17,8 +17,13 @@ import (
 	"golang.org/x/time/rate"
 )
 
-func InitLimiters() (*ratelimit.LocalLimiter, *ratelimit.LocalLimiter) {
+func InitLimiters() (*ratelimit.LocalLimiter, *ratelimit.LocalLimiter, *ratelimit.LocalLimiter) {
 	oracleLimiter := ratelimit.NewLocalLimiter(
+		rate.Every(time.Minute/oracle.AnkrRateLimitPerMinute),
+		oracle.AnkrRateLimitBurst,
+	)
+
+	syncLimiter := ratelimit.NewLocalLimiter(
 		rate.Every(time.Minute/oracle.AnkrRateLimitPerMinute),
 		oracle.AnkrRateLimitBurst,
 	)
@@ -28,25 +33,29 @@ func InitLimiters() (*ratelimit.LocalLimiter, *ratelimit.LocalLimiter) {
 		coingecko.CoinGeckoRateLimitBurst,
 	)
 
-	return oracleLimiter, coinGeckoLimiter
+	return oracleLimiter, syncLimiter, coinGeckoLimiter
 }
 
-func Sync(oracleClient *oracle.Client, priceHistory *history.PriceHistory) {
+func Sync(oracleClient *oracle.Client, priceHistory *history.PriceHistory, limiter ratelimit.Limiter) {
 
-	fromBlock := oracleClient.DeploymentBlock()
-	currentLatestBlock, err := oracleClient.RPC().BlockNumber(context.Background())
+	if err := limiter.Wait(context.Background()); err != nil {
+		log.Printf("Rate limiter wait cancelled or deadline exceeded: %v", err)
+		return
+	}
+	currentLatestBlock, err := oracleClient.RpcSync().BlockNumber(context.Background())
 	if err != nil {
 		log.Printf("error on latest block fetch: %v", err)
 		return
 	}
 
-	fromBlock = currentLatestBlock - 60 // TO DO - REMOVE THIS LINE IN PRODUCTION - rewritten just for development
-	if err := priceHistory.ReverseSyncFromContract(oracleClient, fromBlock, currentLatestBlock); err != nil {
+	fromBlock := oracleClient.DeploymentBlock()
+	fromBlock = currentLatestBlock - 60 // TO DO - REMOVE THIS LINE IN PRODUCTION MODE - overrides the line above just for development
+	if err := priceHistory.ReverseSyncFromContract(oracleClient, fromBlock, currentLatestBlock, limiter); err != nil {
 		log.Printf("Reverse Backfill Failed: %v", err)
 	}
 
 	fromBlock = currentLatestBlock
-	if err := priceHistory.ForwardSyncFromContract(oracleClient, fromBlock); err != nil {
+	if err := priceHistory.ForwardSyncFromContract(oracleClient, fromBlock, limiter); err != nil {
 		log.Printf("Forward Sync Failed: %v", err)
 	}
 
