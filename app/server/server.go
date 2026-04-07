@@ -4,17 +4,19 @@ import (
 	"Blockchain-PriceOracle/app/api"
 	"Blockchain-PriceOracle/app/history"
 	"Blockchain-PriceOracle/app/websocket"
+	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 )
 
-func SetupServer(oracleClient *oracle.Client, priceHistory *history.PriceHistory, revertHistory *oracle.RevertHistory, mgr *websocket.ClientManager) *gin.Engine {
+func SetupServer(oracleClient *oracle.Client, cgClient *coingecko.Client, priceHistory *history.PriceHistory, revertHistory *oracle.RevertHistory, mgr *websocket.ClientManager) *gin.Engine {
 	r := gin.Default()
 
 	h := &api.Handler{
 		OracleClient: oracleClient,
+		CoinGecko:    cgClient,
 		PriceHistory: priceHistory,
 		Reverts:      revertHistory,
 	}

@@ -2,7 +2,6 @@ package api
 
 import (
 	"Blockchain-PriceOracle/app/history"
-	"Blockchain-PriceOracle/internal/coingecko"
 	"math/big"
 	"net/http"
 	"strconv"
@@ -27,6 +26,10 @@ type OracleInterface interface {
 	GetPrices(symbol string) (*big.Int, *big.Int, error)
 }
 
+type CoinGeckoInterface interface {
+	FetchPrices() (map[string]*big.Int, error)
+}
+
 type PriceHistoryInterface interface {
 	Range(symbol string, from, to time.Time) []history.PricePoint
 	LastN(symbol string, n int) []history.PricePoint
@@ -38,6 +41,7 @@ type RevertHistoryInterface interface {
 
 type Handler struct {
 	OracleClient OracleInterface
+	CoinGecko    CoinGeckoInterface
 	PriceHistory PriceHistoryInterface
 	Reverts      RevertHistoryInterface
 }
@@ -56,7 +60,7 @@ func (h *Handler) GetPricesHandler(c *gin.Context) {
 		return
 	}
 
-	cgPrices, err := coingecko.FetchPrices()
+	cgPrices, err := h.CoinGecko.FetchPrices()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{
 			"error": "Failed to fetch CoinGecko price: " + err.Error(),

@@ -35,7 +35,7 @@ func Sync(oracleClient *oracle.Client, priceHistory *history.PriceHistory) {
 
 }
 
-func CoinGeckoLoop(oracleClient *oracle.Client) {
+func CoinGeckoLoop(oracleClient *oracle.Client, cgClient *coingecko.Client) {
 	time.Sleep(3 * time.Second) //to separate these logs from logs at app start
 
 	ticker := time.NewTicker(1 * time.Minute)
@@ -48,7 +48,7 @@ func CoinGeckoLoop(oracleClient *oracle.Client) {
 	for {
 		fmt.Println("\n=== NEW MINUTE ===")
 
-		cgPrices, err := coingecko.FetchPrices()
+		cgPrices, err := cgClient.FetchPrices()
 		if err != nil {
 			log.Printf("Fetch error: %v\n", err)
 			<-ticker.C

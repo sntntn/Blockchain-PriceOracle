@@ -2,14 +2,18 @@ package main
 
 import (
 	"log"
+	"time"
 
 	"Blockchain-PriceOracle/app/automation"
 	"Blockchain-PriceOracle/app/history"
 	"Blockchain-PriceOracle/app/server"
 	"Blockchain-PriceOracle/app/websocket"
+	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
+	"Blockchain-PriceOracle/internal/ratelimit"
 
 	"github.com/joho/godotenv"
+	"golang.org/x/time/rate"
 )
 
 func main() {
@@ -21,12 +25,17 @@ func main() {
 	revertHistory := oracle.GetRevertHistory()
 	oracleClient := oracle.GetOracleClient(revertHistory)
 	clientWebsocketsManager := websocket.GetClientManager()
+	cgLimiter := ratelimit.NewLocalLimiter(
+		rate.Every(time.Minute/coingecko.CoinGeckoRateLimitPerMinute),
+		coingecko.CoinGeckoRateLimitBurst,
+	)
+	cgClient := coingecko.NewClient(cgLimiter)
 
 	automation.Sync(oracleClient, priceHistory)
 
-	go automation.CoinGeckoLoop(oracleClient)
+	go automation.CoinGeckoLoop(oracleClient, cgClient)
 
-	server := server.SetupServer(oracleClient, priceHistory, revertHistory, clientWebsocketsManager)
+	server := server.SetupServer(oracleClient, cgClient, priceHistory, revertHistory, clientWebsocketsManager)
 	automation.StartEthereumListener(priceHistory, clientWebsocketsManager)
 
 	log.Println("API Server: http://localhost:8080")
