@@ -242,14 +242,15 @@ func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *bi
 
 	log.Printf("WAITING FOR STATUS of TX %s: %s", symbol, tx.Hash().Hex())
 
-	// TO DO(temporary solution) - bind is implemented as a pooling
-	if err := c.allow(); err != nil {
-		log.Printf("rate limit before wait mined: %v", err)
+	if err := c.limiter.Wait(context.Background()); err != nil {
+		log.Printf("ERROR: rate limiter wait failed (WaitMined): %v", err)
+		log.Printf("DEBUG: revert is now possible for %s (track: %s)", symbol, tx.Hash().Hex())
 		return
 	}
 	receipt, err := bind.WaitMined(context.Background(), c.rpc, tx.Hash())
 	if err != nil {
 		log.Printf("WAIT MINED TX ERROR: %s | %v", tx.Hash().Hex(), err)
+		log.Printf("DEBUG: revert is now possible for %s (track: %s)", symbol, tx.Hash().Hex())
 		return
 	}
 
