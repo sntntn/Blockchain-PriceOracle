@@ -50,7 +50,7 @@ func Sync(oracleClient *oracle.Client, priceHistory *history.PriceHistory, limit
 
 	fromBlock := oracleClient.DeploymentBlock()
 	fromBlock = currentLatestBlock - 60 // TO DO - REMOVE THIS LINE IN PRODUCTION MODE - overrides the line above just for development
-	if err := priceHistory.ReverseSyncFromContract(oracleClient, fromBlock, currentLatestBlock, limiter); err != nil {
+	if err := priceHistory.ReverseSyncFromContract(oracleClient, fromBlock, currentLatestBlock-1, limiter); err != nil {
 		log.Printf("Reverse Backfill Failed: %v", err)
 	}
 
