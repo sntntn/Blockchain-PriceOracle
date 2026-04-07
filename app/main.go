@@ -29,7 +29,7 @@ func main() {
 		rate.Every(time.Minute/coingecko.CoinGeckoRateLimitPerMinute),
 		coingecko.CoinGeckoRateLimitBurst,
 	)
-	cgClient := coingecko.NewClient(cgLimiter)
+	cgClient := coingecko.GetCoinGeckoClient(cgLimiter)
 
 	automation.Sync(oracleClient, priceHistory)
 

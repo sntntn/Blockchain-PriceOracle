@@ -5,16 +5,37 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log"
 	"math/big"
 	"net/http"
+	"sync"
 )
 
-type Client struct {
-	limiter ratelimit.Limiter
+var (
+	cgClient *Client
+	cgOnce   sync.Once
+)
+
+func GetCoinGeckoClient(limiter ratelimit.Limiter) *Client {
+	cgOnce.Do(func() {
+		url := BuildPriceURL()
+		cgClient = NewCgClient(limiter, url, fetchJSON)
+	})
+	return cgClient
 }
 
-func NewClient(limiter ratelimit.Limiter) *Client {
-	return &Client{limiter: limiter}
+type Client struct {
+	limiter   ratelimit.Limiter
+	url       string
+	fetchJSON func(url string) (Response, error)
+}
+
+func NewCgClient(limiter ratelimit.Limiter, url string, fetchJSON func(url string) (Response, error)) *Client {
+	return &Client{
+		limiter:   limiter,
+		url:       url,
+		fetchJSON: fetchJSON,
+	}
 }
 
 func (c *Client) FetchPrices() (map[string]*big.Int, error) {
@@ -26,9 +47,7 @@ func (c *Client) FetchPrices() (map[string]*big.Int, error) {
 		return nil, fmt.Errorf("rate limit exceeded, try again in %v", delay)
 	}
 
-	url := BuildPriceURL()
-
-	cgResp, err := fetchJSON(url)
+	cgResp, err := c.fetchJSON(c.url)
 	if err != nil {
 		return nil, err
 	}
@@ -69,13 +88,13 @@ func MapCGtoContract(cgResp Response) map[string]*big.Int {
 			if usdPrice, ok := coinData["usd"]; ok {
 				contractPrice := float64ToContract(usdPrice)
 				prices[contractSymbol] = contractPrice
-				fmt.Printf("%s: $%.2f -> %s (coingecko conversion)\n", contractSymbol, usdPrice, contractPrice.String())
+				log.Printf("%s: $%.2f -> %s (coingecko conversion)\n", contractSymbol, usdPrice, contractPrice.String())
 			} else {
-				fmt.Printf("ERROR: %s USD price not found\n", contractSymbol)
+				log.Printf("DEBUG: %s USD price not found\n", contractSymbol)
 			}
 
 		} else {
-			fmt.Printf("ERROR: %s not in response\n", cgId)
+			log.Printf("DEBUG: %s not in response\n", cgId)
 		}
 	}
 	return prices
