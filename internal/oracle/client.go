@@ -116,15 +116,7 @@ func (c *Client) GetPrices(symbol string) (onchainPrice, chainlinkPrice *big.Int
 		Data: data,
 	}, nil)
 	if err != nil {
-		if strings.Contains(err.Error(), "UnsupportedSymbol") {
-			log.Printf("Unsupported symbol %s: %v", symbol, err)
-		} else if strings.Contains(err.Error(), "IncompleteRound") {
-			log.Printf("Incomplete round %s: %v", symbol, err)
-		} else if strings.Contains(err.Error(), "InvalidPrice") {
-			log.Printf("Invalid price %s: %v", symbol, err)
-		} else if strings.Contains(err.Error(), "StalePrice") {
-			log.Printf("Stale price %s: %v", symbol, err)
-		}
+		handleContractError(symbol, err)
 		return nil, nil, err
 	}
 
