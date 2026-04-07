@@ -7,6 +7,7 @@ require (
 	github.com/gin-gonic/gin v1.12.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/joho/godotenv v1.5.1
+	golang.org/x/time v0.9.0
 )
 
 require (

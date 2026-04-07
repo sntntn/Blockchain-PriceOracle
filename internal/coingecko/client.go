@@ -6,9 +6,26 @@ import (
 	"io"
 	"math/big"
 	"net/http"
+	"sync"
+	"time"
+
+	"golang.org/x/time/rate"
+)
+
+var (
+	limiter = rate.NewLimiter(rate.Every(time.Minute/CoinGeckoRateLimitPerMinute), CoinGeckoRateLimitBurst)
+	mu      sync.Mutex
 )
 
 func FetchPrices() (map[string]*big.Int, error) {
+	if !limiter.Allow() {
+		r := limiter.Reserve()
+		delay := r.DelayFrom(time.Now())
+		r.Cancel()
+
+		return nil, fmt.Errorf("rate limit exceeded, try again in %v", delay)
+	}
+
 	url := BuildPriceURL()
 
 	cgResp, err := fetchJSON(url)

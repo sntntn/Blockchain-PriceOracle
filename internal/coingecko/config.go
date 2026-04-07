@@ -1,11 +1,16 @@
 package coingecko
 
-import "strings"
+import (
+	"os"
+	"strings"
+)
 
 const (
-	BaseURL    = "https://api.coingecko.com/api/v3"
-	PricePath  = "/simple/price"
-	VsCurrency = "usd"
+	BaseURL                     = "https://api.coingecko.com/api/v3"
+	PricePath                   = "/simple/price"
+	VsCurrency                  = "usd"
+	CoinGeckoRateLimitPerMinute = 30
+	CoinGeckoRateLimitBurst     = 30
 )
 
 // Symbol mapping (CoinGecko ID -> Contract symbol)
@@ -27,7 +32,13 @@ func GetCoinGeckoIDs() []string {
 func BuildPriceURL() string {
 	ids := GetCoinGeckoIDs()
 
+	apiKey := os.Getenv("COINGECKO_API_KEY")
+	if apiKey == "" {
+		panic("COINGECKO_API_KEY not set")
+	}
+
 	return BaseURL + PricePath +
 		"?ids=" + strings.Join(ids, ",") +
-		"&vs_currencies=" + VsCurrency
+		"&vs_currencies=" + VsCurrency +
+		"&x_cg_demo_api_key=" + apiKey
 }
