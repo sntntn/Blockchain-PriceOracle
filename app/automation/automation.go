@@ -6,13 +6,30 @@ import (
 	"Blockchain-PriceOracle/app/websocket"
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
+	"Blockchain-PriceOracle/internal/ratelimit"
 	"context"
 	"fmt"
 	"log"
 	"math/big"
 	"os"
 	"time"
+
+	"golang.org/x/time/rate"
 )
+
+func InitLimiters() (*ratelimit.LocalLimiter, *ratelimit.LocalLimiter) {
+	oracleLimiter := ratelimit.NewLocalLimiter(
+		rate.Every(time.Minute/oracle.AnkrRateLimitPerMinute),
+		oracle.AnkrRateLimitBurst,
+	)
+
+	coinGeckoLimiter := ratelimit.NewLocalLimiter(
+		rate.Every(time.Minute/coingecko.CoinGeckoRateLimitPerMinute),
+		coingecko.CoinGeckoRateLimitBurst,
+	)
+
+	return oracleLimiter, coinGeckoLimiter
+}
 
 func Sync(oracleClient *oracle.Client, priceHistory *history.PriceHistory) {
 
@@ -55,7 +72,7 @@ func CoinGeckoLoop(oracleClient *oracle.Client, cgClient *coingecko.Client) {
 			continue
 		}
 
-		PrintPrices(&cgPrices)
+		//PrintPrices(&cgPrices)
 
 		for symbol, price := range cgPrices {
 			// NOTE: returning Chainlink price captured at validation time;

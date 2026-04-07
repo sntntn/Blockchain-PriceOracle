@@ -14,14 +14,21 @@ import (
 var (
 	cgClient *Client
 	cgOnce   sync.Once
+	cgErr    error
 )
 
-func GetCoinGeckoClient(limiter ratelimit.Limiter) *Client {
+func GetCoinGeckoClient(limiter ratelimit.Limiter) (*Client, error) {
 	cgOnce.Do(func() {
-		url := BuildPriceURL()
+		url, err := BuildPriceURL()
+		if err != nil {
+			cgErr = err
+			return
+		}
+
 		cgClient = NewCgClient(limiter, url, fetchJSON)
 	})
-	return cgClient
+
+	return cgClient, cgErr
 }
 
 type Client struct {

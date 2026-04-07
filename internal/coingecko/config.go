@@ -29,7 +29,7 @@ func GetCoinGeckoIDs() []string {
 	return ids
 }
 
-func BuildPriceURL() string {
+func BuildPriceURL() (string, error) {
 	ids := GetCoinGeckoIDs()
 
 	apiKey := os.Getenv("COINGECKO_API_KEY")
@@ -37,8 +37,10 @@ func BuildPriceURL() string {
 		panic("COINGECKO_API_KEY not set")
 	}
 
-	return BaseURL + PricePath +
+	url := BaseURL + PricePath +
 		"?ids=" + strings.Join(ids, ",") +
 		"&vs_currencies=" + VsCurrency +
 		"&x_cg_demo_api_key=" + apiKey
+
+	return url, nil
 }

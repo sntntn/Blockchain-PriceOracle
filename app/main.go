@@ -2,7 +2,6 @@ package main
 
 import (
 	"log"
-	"time"
 
 	"Blockchain-PriceOracle/app/automation"
 	"Blockchain-PriceOracle/app/history"
@@ -10,10 +9,8 @@ import (
 	"Blockchain-PriceOracle/app/websocket"
 	"Blockchain-PriceOracle/internal/coingecko"
 	"Blockchain-PriceOracle/internal/oracle"
-	"Blockchain-PriceOracle/internal/ratelimit"
 
 	"github.com/joho/godotenv"
-	"golang.org/x/time/rate"
 )
 
 func main() {
@@ -23,13 +20,18 @@ func main() {
 
 	priceHistory := history.GetPriceHistory()
 	revertHistory := oracle.GetRevertHistory()
-	oracleClient := oracle.GetOracleClient(revertHistory)
+	oracleLimiter, cgLimiter := automation.InitLimiters()
+
+	oracleClient, err := oracle.GetOracleClient(revertHistory, oracleLimiter)
+	if err != nil {
+		log.Fatalf("failed to init oracle client: %v", err)
+	}
+	cgClient, err := coingecko.GetCoinGeckoClient(cgLimiter)
+	if err != nil {
+		log.Fatalf("failed to init CoinGecko client: %v", err)
+	}
+
 	clientWebsocketsManager := websocket.GetClientManager()
-	cgLimiter := ratelimit.NewLocalLimiter(
-		rate.Every(time.Minute/coingecko.CoinGeckoRateLimitPerMinute),
-		coingecko.CoinGeckoRateLimitBurst,
-	)
-	cgClient := coingecko.GetCoinGeckoClient(cgLimiter)
 
 	automation.Sync(oracleClient, priceHistory)
 

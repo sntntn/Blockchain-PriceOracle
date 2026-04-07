@@ -5,6 +5,11 @@ import (
 	"strconv"
 )
 
+const (
+	AnkrRateLimitPerMinute = 1800
+	AnkrRateLimitBurst     = 1800
+)
+
 type Config struct {
 	SepoliaRPC      string
 	ContractAddr    string

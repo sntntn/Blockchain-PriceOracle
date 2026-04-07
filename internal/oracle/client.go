@@ -1,6 +1,7 @@
 package oracle
 
 import (
+	"Blockchain-PriceOracle/internal/ratelimit"
 	"context"
 	"crypto/ecdsa"
 	"fmt"
@@ -21,17 +22,42 @@ import (
 var (
 	oracleClient *Client
 	once         sync.Once
+	initErr      error
 )
 
-func GetOracleClient(reverts RevertHistoryInterface) *Client {
+func GetOracleClient(reverts *RevertHistory, limiter ratelimit.Limiter) (*Client, error) {
 	once.Do(func() {
-		var err error
-		oracleClient, err = NewClient(reverts)
+		config := LoadConfig()
+
+		conn, err := ethclient.Dial(config.SepoliaRPC)
 		if err != nil {
-			log.Fatalf("Oracle client init: %v", err)
+			initErr = fmt.Errorf("RPC dial: %w", err)
+			return
+		}
+
+		contractAbi, err := abi.JSON(strings.NewReader(ContractABI))
+		if err != nil {
+			initErr = fmt.Errorf("ABI parse: %w", err)
+			return
+		}
+
+		addr := common.HexToAddress(config.ContractAddr)
+
+		oracleClient, err = NewOracleClient(
+			reverts,
+			limiter,
+			addr,
+			config.DeploymentBlock,
+			&contractAbi,
+			conn,
+		)
+		if err != nil {
+			initErr = fmt.Errorf("Oracle client init: %w", err)
+			return
 		}
 	})
-	return oracleClient
+
+	return oracleClient, initErr
 }
 
 type Client struct {
@@ -41,28 +67,17 @@ type Client struct {
 	contractABI     *abi.ABI
 
 	reverts RevertHistoryInterface
+	limiter ratelimit.Limiter
 }
 
-func NewClient(reverts RevertHistoryInterface) (*Client, error) {
-
-	config := LoadConfig()
-
-	conn, err := ethclient.Dial(config.SepoliaRPC)
-	if err != nil {
-		return nil, fmt.Errorf("RPC dial: %w", err)
-	}
-
-	contractAbi, err := abi.JSON(strings.NewReader(ContractABI))
-	if err != nil {
-		return nil, fmt.Errorf("ABI parse: %w", err)
-	}
-
+func NewOracleClient(reverts RevertHistoryInterface, limiter ratelimit.Limiter, addr common.Address, deploymentBlock uint64, contractAbi *abi.ABI, conn *ethclient.Client) (*Client, error) {
 	return &Client{
 		rpc:             conn,
-		addr:            common.HexToAddress(config.ContractAddr),
-		deploymentBlock: config.DeploymentBlock,
-		contractABI:     &contractAbi,
+		addr:            addr,
+		deploymentBlock: deploymentBlock,
+		contractABI:     contractAbi,
 		reverts:         reverts,
+		limiter:         limiter,
 	}, nil
 }
 
@@ -79,6 +94,10 @@ func (c *Client) RPC() *ethclient.Client {
 }
 
 func (c *Client) GetPrices(symbol string) (onchainPrice, chainlinkPrice *big.Int, err error) {
+	if err := c.allow(); err != nil {
+		return nil, nil, err
+	}
+
 	data, err := c.contractABI.Pack("getPrices", symbol)
 	if err != nil {
 		return nil, nil, fmt.Errorf("pack: %w", err)
@@ -142,12 +161,20 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) er
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 
+	if err := c.allow(); err != nil {
+		lock.Unlock(symbol)
+		return err
+	}
 	nonce, err := c.rpc.PendingNonceAt(context.Background(), fromAddress)
 	if err != nil {
 		lock.Unlock(symbol)
 		return fmt.Errorf("nonce error: %w", err)
 	}
 
+	if err := c.allow(); err != nil {
+		lock.Unlock(symbol)
+		return err
+	}
 	gasPrice, err := c.rpc.SuggestGasPrice(context.Background())
 	if err != nil {
 		lock.Unlock(symbol)
@@ -170,6 +197,10 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) er
 		data,
 	)
 
+	if err := c.allow(); err != nil {
+		lock.Unlock(symbol)
+		return err
+	}
 	chainID, err := c.rpc.NetworkID(context.Background())
 	if err != nil {
 		lock.Unlock(symbol)
@@ -182,6 +213,10 @@ func (c *Client) SetPrice(symbol string, newPrice *big.Int, clPrice *big.Int) er
 		return fmt.Errorf("sign tx error: %w", err)
 	}
 
+	if err := c.allow(); err != nil {
+		lock.Unlock(symbol)
+		return err
+	}
 	err = c.rpc.SendTransaction(context.Background(), signedTx)
 	if err != nil {
 		lock.Unlock(symbol)
@@ -199,6 +234,11 @@ func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *bi
 
 	log.Printf("WAITING FOR STATUS of TX %s: %s", symbol, tx.Hash().Hex())
 
+	// TO DO(temporary solution) - bind is implemented as a pooling
+	if err := c.allow(); err != nil {
+		log.Printf("rate limit before wait mined: %v", err)
+		return
+	}
 	receipt, err := bind.WaitMined(context.Background(), c.rpc, tx.Hash())
 	if err != nil {
 		log.Printf("WAIT MINED TX ERROR: %s | %v", tx.Hash().Hex(), err)
@@ -224,4 +264,15 @@ func (c *Client) waitForTxResult(tx *types.Transaction, symbol string, price *bi
 			price.String(),
 		)
 	}
+}
+
+func (c *Client) allow() error {
+	ok, delay, err := c.limiter.Allow()
+	if err != nil {
+		return err
+	}
+	if !ok {
+		return fmt.Errorf("rpc rate limit exceeded, try again in %v", delay)
+	}
+	return nil
 }
