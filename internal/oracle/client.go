@@ -7,17 +7,32 @@ import (
 	"fmt"
 	"log"
 	"math/big"
-	"strings"
 	"sync"
 
 	"github.com/ethereum/go-ethereum"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
+
+type EthereumClient interface {
+	CallContract(ctx context.Context, msg ethereum.CallMsg, blockNumber *big.Int) ([]byte, error)
+	PendingNonceAt(ctx context.Context, account common.Address) (uint64, error)
+	SuggestGasPrice(ctx context.Context) (*big.Int, error)
+	SendTransaction(ctx context.Context, tx *types.Transaction) error
+	NetworkID(ctx context.Context) (*big.Int, error)
+	FilterLogs(ctx context.Context, q ethereum.FilterQuery) ([]types.Log, error)
+	BlockNumber(ctx context.Context) (uint64, error)
+	TransactionReceipt(ctx context.Context, txHash common.Hash) (*types.Receipt, error)       //for bind
+	CodeAt(ctx context.Context, account common.Address, blockNumber *big.Int) ([]byte, error) //for bind
+}
+
+type ABI interface {
+	Pack(name string, args ...interface{}) ([]byte, error)
+	Unpack(name string, data []byte) ([]interface{}, error)
+}
 
 var (
 	oracleClient *Client
@@ -28,6 +43,8 @@ var (
 func GetOracleClient(reverts *RevertHistory, limiter ratelimit.Limiter) (*Client, error) {
 	once.Do(func() {
 		config := LoadConfig()
+
+		contractAbi, err := newRealABI(ContractABI)
 
 		conn, err := ethclient.Dial(config.SepoliaRpc)
 		if err != nil {
@@ -40,7 +57,6 @@ func GetOracleClient(reverts *RevertHistory, limiter ratelimit.Limiter) (*Client
 			return
 		}
 
-		contractAbi, err := abi.JSON(strings.NewReader(ContractABI))
 		if err != nil {
 			initErr = fmt.Errorf("ABI parse: %w", err)
 			return
@@ -53,7 +69,7 @@ func GetOracleClient(reverts *RevertHistory, limiter ratelimit.Limiter) (*Client
 			limiter,
 			addr,
 			config.DeploymentBlock,
-			&contractAbi,
+			contractAbi,
 			conn,
 			connSync,
 		)
@@ -67,17 +83,17 @@ func GetOracleClient(reverts *RevertHistory, limiter ratelimit.Limiter) (*Client
 }
 
 type Client struct {
-	rpc             *ethclient.Client
-	rpcSync         *ethclient.Client
+	rpc             EthereumClient
+	rpcSync         EthereumClient
 	addr            common.Address
 	deploymentBlock uint64
-	contractABI     *abi.ABI
+	contractABI     ABI
 
 	reverts RevertHistoryInterface
 	limiter ratelimit.Limiter
 }
 
-func NewOracleClient(reverts RevertHistoryInterface, limiter ratelimit.Limiter, addr common.Address, deploymentBlock uint64, contractAbi *abi.ABI, conn *ethclient.Client, connSync *ethclient.Client) (*Client, error) {
+func NewOracleClient(reverts RevertHistoryInterface, limiter ratelimit.Limiter, addr common.Address, deploymentBlock uint64, contractAbi ABI, conn *ethclient.Client, connSync *ethclient.Client) (*Client, error) {
 	return &Client{
 		rpc:             conn,
 		rpcSync:         connSync,
@@ -97,7 +113,7 @@ func (c *Client) Address() common.Address {
 	return c.addr
 }
 
-func (c *Client) RpcSync() *ethclient.Client {
+func (c *Client) RpcSync() EthereumClient {
 	return c.rpc
 }
 

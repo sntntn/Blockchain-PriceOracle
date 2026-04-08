@@ -5,8 +5,10 @@ go 1.25.0
 require (
 	github.com/ethereum/go-ethereum v1.17.1
 	github.com/gin-gonic/gin v1.12.0
+	github.com/golang/mock v1.6.0
 	github.com/gorilla/websocket v1.4.2
 	github.com/joho/godotenv v1.5.1
+	go.uber.org/mock v0.6.0
 	golang.org/x/time v0.9.0
 )
 
