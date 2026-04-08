@@ -12,26 +12,34 @@ import (
 type PricePublisher interface {
 	Add(symbol, price string, timestamp time.Time)
 }
+type WSClient interface {
+	WriteJSON(v interface{}) error
+	Close() error
+}
+
+type RealWSClient struct {
+	conn *websocket.Conn
+}
+
+func (c *RealWSClient) WriteJSON(v interface{}) error {
+	return c.conn.WriteJSON(v)
+}
+
+func (c *RealWSClient) Close() error {
+	return c.conn.Close()
+}
 
 var upgrader = websocket.Upgrader{CheckOrigin: func(r *http.Request) bool { return true }}
 
 type ClientManager struct {
 	mu      sync.RWMutex
-	clients map[*websocket.Conn]bool
+	clients map[WSClient]bool
 }
 
-var (
-	clientMgr *ClientManager
-	once      sync.Once
-)
-
-func GetClientManager() *ClientManager {
-	once.Do(func() {
-		clientMgr = &ClientManager{
-			clients: make(map[*websocket.Conn]bool),
-		}
-	})
-	return clientMgr
+func NewClientManager() *ClientManager {
+	return &ClientManager{
+		clients: make(map[WSClient]bool),
+	}
 }
 
 func SetupWebSocket(r *gin.Engine, mgr *ClientManager) {
@@ -41,13 +49,15 @@ func SetupWebSocket(r *gin.Engine, mgr *ClientManager) {
 			return
 		}
 
+		client := &RealWSClient{conn: ws}
+
 		mgr.mu.Lock()
-		mgr.clients[ws] = true
+		mgr.clients[client] = true
 		mgr.mu.Unlock()
 
 		defer func() {
 			mgr.mu.Lock()
-			delete(mgr.clients, ws)
+			delete(mgr.clients, client)
 			mgr.mu.Unlock()
 			ws.Close()
 		}()
@@ -66,12 +76,21 @@ func PublishPriceUpdate(pricePublisher PricePublisher, mgr *ClientManager, symbo
 	msg := gin.H{"event": "price_updated", "symbol": symbol, "price": price}
 
 	mgr.mu.RLock()
-	defer mgr.mu.RUnlock()
+	// better to copy clients and don't keep lock during network I/O
+	clients := make([]WSClient, 0, len(mgr.clients))
+	for c := range mgr.clients {
+		clients = append(clients, c)
+	}
+	mgr.mu.RUnlock()
 
-	for client := range mgr.clients {
+	for _, client := range clients {
 		err := client.WriteJSON(msg)
 		if err != nil {
 			client.Close()
+
+			mgr.mu.Lock()
+			delete(mgr.clients, client)
+			mgr.mu.Unlock()
 		}
 	}
 }
