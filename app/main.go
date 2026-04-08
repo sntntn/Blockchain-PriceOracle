@@ -31,7 +31,7 @@ func main() {
 		log.Fatalf("failed to init CoinGecko client: %v", err)
 	}
 
-	clientWebsocketsManager := websocket.GetClientManager()
+	clientWebsocketsManager := websocket.NewClientManager()
 
 	automation.Sync(oracleClient, priceHistory, syncLimiter)
 
